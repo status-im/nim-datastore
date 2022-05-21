@@ -7,6 +7,8 @@ description   = "Simple, unified API for multiple data stores"
 license       = "Apache License 2.0 or MIT"
 
 requires "nim >= 1.2.0",
+         "questionable >= 0.10.3 & < 0.11.0",
+         "sqlite3_abi",
          "stew",
          "unittest2",
          "upraises >= 0.1.0 & < 0.2.0"

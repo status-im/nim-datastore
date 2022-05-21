@@ -1,1 +1,3 @@
-proc foo*(): string = "foo"
+import ./datastore/datastore
+
+export datastore
