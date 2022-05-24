@@ -184,6 +184,12 @@ suite "Datastore Key":
 
     check: keyRes.isErr
 
+    nsStrs = @["/"]
+
+    keyRes = Key.init(nsStrs)
+
+    check: keyRes.isErr
+
     nsStrs = @["a:b"]
 
     keyRes = Key.init(nsStrs)
@@ -191,6 +197,22 @@ suite "Datastore Key":
     check: keyRes.isOk
 
     keyRes = Key.init("")
+
+    check: keyRes.isErr
+
+    keyRes = Key.init(":")
+
+    check: keyRes.isErr
+
+    keyRes = Key.init("::")
+
+    check: keyRes.isErr
+
+    keyRes = Key.init("/")
+
+    check: keyRes.isErr
+
+    keyRes = Key.init("///")
 
     check: keyRes.isErr
 
@@ -217,7 +239,7 @@ suite "Datastore Key":
       Key.init("a:b/c").get == Key.init("///a:b///c///").get
       Key.init("a:b/c").get != Key.init("///a:b///d///").get
 
-  test "accessors":
+  test "accessors and helpers":
     var
       keyRes: Result[Key, ref CatchableError]
       key: Key
@@ -228,13 +250,54 @@ suite "Datastore Key":
     key = keyRes.get
 
     check:
-      key.namespaces.len == 3
-
       key.namespaces == @[
         Namespace.init("a:b").get,
         Namespace.init("c").get,
         Namespace.init("d:e").get
       ]
+
+      key.list == key.namespaces
+
+      key.reversed.namespaces == @[
+        Namespace.init("d:e").get,
+        Namespace.init("c").get,
+        Namespace.init("a:b").get
+      ]
+
+      key.reverse == key.reversed
+
+      key.name == "e"
+
+      key.`type` == "d".some
+      key.kind == key.`type`
+
+      key.instance(Namespace.init("f:g").get) == Key.init("a:b/c/d:g").get
+
+      Key.init("a:b").get.instance(Namespace.init(":c").get) ==
+        Key.init("a:c").get
+
+      Key.init(":b").get.instance(Namespace.init(":c").get) ==
+        Key.init("b:c").get
+
+      Key.init(":b").get.instance(key) == Key.init("b:e").get
+
+      Key.init(":b").get.instance("").isErr
+
+      Key.init(":b").get.instance(":").isErr
+
+      Key.init(":b").get.instance("/").isErr
+
+      Key.init(":b").get.instance("//").isErr
+
+      Key.init(":b").get.instance("///").isErr
+
+      Key.init(":b").get.instance("a").get == Key.init("b:a").get
+
+      Key.init(":b").get.instance(":b").get == Key.init("b:b").get
+
+      Key.init(":b").get.instance("a:b").get == Key.init("b:b").get
+
+      Key.init(":b").get.instance("/a:b/c/d:e").get == Key.init("b:e").get
 
   test "serialization":
     var
