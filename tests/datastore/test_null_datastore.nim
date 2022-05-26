@@ -12,25 +12,25 @@ suite "NullDatastore":
   setup:
     let
       key = Key.init("a").get
-      nds = NullDatastore.new()
+      ds = NullDatastore.new()
 
   test "contains":
     check:
-      nds.contains(key).isOk
-      nds.contains(key).get == false
+      ds.contains(key).isOk
+      ds.contains(key).get == false
 
   test "delete":
-    check: nds.delete(key).isOk
+    check: ds.delete(key).isOk
 
   test "get":
     check:
-      nds.get(key).isOk
-      nds.get(key).get.isNone
+      ds.get(key).isOk
+      ds.get(key).get.isNone
 
   test "put":
-    check: nds.put(key, oneByte).isOk
+    check: ds.put(key, oneByte).isOk
 
   # test "query":
   #   check:
-  #     nds.query(key, ...).isOk
-  #     nds.query(key, ...).get.isNone
+  #     ds.query(key, ...).isOk
+  #     ds.query(key, ...).get.isNone
