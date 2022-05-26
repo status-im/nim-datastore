@@ -97,6 +97,8 @@ suite "Datastore Namespace":
       ns.value == "b"
       ns.field.isSome
       ns.field.get == "a"
+      ns.`type`.get == ns.field.get
+      ns.kind.get == ns.field.get
 
     nsRes = Namespace.init(":b")
 
@@ -116,6 +118,8 @@ suite "Datastore Namespace":
       ns.value == "b"
       ns.field.isSome
       ns.field.get == "a"
+      ns.`type`.get == ns.field.get
+      ns.kind.get == ns.field.get
 
   test "serialization":
     var
@@ -258,6 +262,12 @@ suite "Datastore Key":
 
       key.list == key.namespaces
 
+      key.last == Namespace.init("d:e").get
+      key.last == key.namespaces[^1]
+
+      key.len == 3
+      key.len == key.namespaces.len
+
       key.reversed.namespaces == @[
         Namespace.init("d:e").get,
         Namespace.init("c").get,
@@ -298,6 +308,51 @@ suite "Datastore Key":
       Key.init(":b").get.instance("a:b").get == Key.init("b:b").get
 
       Key.init(":b").get.instance("/a:b/c/d:e").get == Key.init("b:e").get
+
+      Key.init(":b").get.isTopLevel
+
+      not Key.init(":b/c").get.isTopLevel
+
+      Key.init(":b").get.parent.isErr
+
+      Key.init(":b").parent.isErr
+
+      key.parent.get == Key.init("a:b/c").get
+
+      key.parent.parent.get == Key.init("a:b").get
+
+      key.parent.parent.parent.isErr
+
+      key.parent.get.path.get == Key.init("a:b").get
+
+      key.path.get == Key.init("a:b/c/d").get
+
+      Key.init("a:b/c").path.get == Key.init("a:b").get
+
+      Key.init("a:b/c/d:e").path.get == Key.init("a:b/c/d").get
+
+      key.child(Namespace.init("f:g").get) ==
+        Key.init("a:b/c/d:e/f:g").get
+
+      key.child(Namespace.init("f:g").get, Namespace.init("h:i").get) ==
+        Key.init("a:b/c/d:e/f:g/h:i").get
+
+      key.child(Key.init("f:g").get) == Key.init("a:b/c/d:e/f:g").get
+
+      key.child(Key.init("f:g").get, Key.init("h:i").get) ==
+        Key.init("a:b/c/d:e/f:g/h:i").get
+
+      key.child("f:g", ":::").isErr
+
+      key.child("f:g", "h:i").get == Key.init("a:b/c/d:e/f:g/h:i").get
+
+      not key.isAncestorOf(Key.init("f:g").get)
+
+      key.isAncestorOf(key.child(Key.init("f:g").get))
+
+      key.isDescendantOf(key.parent.get)
+
+      not Key.init("f:g").get.isDescendantOf(key.parent.get)
 
   test "serialization":
     var
