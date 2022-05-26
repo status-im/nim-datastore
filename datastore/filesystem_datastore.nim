@@ -14,7 +14,7 @@ type
   FileSystemDatastore* = ref object of Datastore
     root: string
 
-proc new*(T: type FileSystemDatastore, root = getCurrentDir()): ?!T =
+proc new*(T: type FileSystemDatastore, root = getCurrentDir() / "data"): ?!T =
   try:
     createDir(root)
     success T(root: root)
