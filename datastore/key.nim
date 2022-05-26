@@ -23,7 +23,11 @@ const
   delimiter = ":"
   separator = "/"
 
-# TODO for Key: `[]`, iterator, randomKey
+# TODO for Namespace: operator/s
+
+# TODO for Key: `[]` for indexing (natural/range), iterator (over namespaces), randomKey
+
+# TODO in general: lifting from Result([Namespace|Key], ref CatchableError) where not already implemented
 
 proc init*(T: type Namespace, field, value: string): ?!T =
   if value == "": return failure "value string must not be empty"
@@ -146,7 +150,7 @@ proc init*(T: type Key, id: string): ?!T =
     # at runtime, why?
     without key =? keyRes:
       return failure "id string contains an invalid Namespace:" &
-        keyRes.error.msg.split(":")[1..^1].join("")
+        keyRes.error.msg.split(":")[1..^1].join("").replace("\"\"", "\":\"")
 
     success key
 
@@ -237,29 +241,38 @@ proc path*(self: ?!Key): ?!Key =
 proc child*(self: Key, ns: Namespace): Key =
   Key(namespaces: self.namespaces & @[ns])
 
-proc child*(self: Key, nss: varargs[Namespace]): Key =
-  Key(namespaces: self.namespaces & @nss)
+proc `/`*(self: Key, ns: Namespace): Key =
+  self.child(ns)
+
+proc child*(self: Key, namespaces: varargs[Namespace]): Key =
+  Key(namespaces: self.namespaces & @namespaces)
 
 proc child*(self: Key, key: Key): Key =
   Key(namespaces: self.namespaces & key.namespaces)
+
+proc `/`*(self: Key, key: Key): Key =
+  self.child(key)
 
 proc child*(self: Key, keys: varargs[Key]): Key =
   Key(namespaces: self.namespaces & concat(keys.mapIt(it.namespaces)))
 
 proc child*(self: Key, ids: varargs[string]): ?!Key =
-  if ids.len == 0:
-    failure "ids must contain at least one Key id string"
-  else:
-    var
-      keys: seq[Key]
+  let
+    ids = ids.filterIt(it != "")
 
-    for id in ids:
-      let
-        key = ? Key.init(id)
+  var
+    keys: seq[Key]
 
-      keys.add key
+  for id in ids:
+    let
+      key = ? Key.init(id)
 
-    success self.child(keys)
+    keys.add key
+
+  success self.child(keys)
+
+proc `/`*(self: Key, id: string): ?!Key =
+  self.child(id)
 
 proc isAncestorOf*(self, other: Key): bool =
   if other.len <= self.len:

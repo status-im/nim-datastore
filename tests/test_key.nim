@@ -1,4 +1,5 @@
 import std/options
+import std/sequtils
 
 import pkg/questionable
 import pkg/questionable/results
@@ -334,17 +335,35 @@ suite "Datastore Key":
       key.child(Namespace.init("f:g").get) ==
         Key.init("a:b/c/d:e/f:g").get
 
+      key / Namespace.init("f:g").get == Key.init("a:b/c/d:e/f:g").get
+
       key.child(Namespace.init("f:g").get, Namespace.init("h:i").get) ==
         Key.init("a:b/c/d:e/f:g/h:i").get
 
+      key.child(@[Namespace.init("f:g").get]
+        .filterIt(it != Namespace.init("f:g").get)) == key
+
       key.child(Key.init("f:g").get) == Key.init("a:b/c/d:e/f:g").get
+
+      key / Key.init("f:g").get == Key.init("a:b/c/d:e/f:g").get
 
       key.child(Key.init("f:g").get, Key.init("h:i").get) ==
         Key.init("a:b/c/d:e/f:g/h:i").get
 
+      key.child(@[Key.init("f:g").get]
+        .filterIt(it != Key.init("f:g").get)) == key
+
       key.child("f:g", ":::").isErr
 
       key.child("f:g", "h:i").get == Key.init("a:b/c/d:e/f:g/h:i").get
+
+      key.child("").get == key
+
+      key.child("", "", "").get == key
+
+      (key / "f:g").get == Key.init("a:b/c/d:e/f:g").get
+
+      (key / "").get == key
 
       not key.isAncestorOf(Key.init("f:g").get)
 
