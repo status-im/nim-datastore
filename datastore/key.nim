@@ -1,10 +1,13 @@
 import std/algorithm
+import std/hashes
 import std/sequtils
 import std/strutils
 
 import pkg/questionable
 import pkg/questionable/results
 import pkg/upraises
+
+export hashes
 
 push: {.upraises: [].}
 
