@@ -18,5 +18,9 @@ proc new*(T: type FileSystemDatastore, root = getCurrentDir() / "data"): ?!T =
   try:
     createDir(root)
     success T(root: root)
+
+  except IOError as e:
+    failure "IOError: " & e.msg
+
   except OSError as e:
     failure "OSError: " & e.msg
