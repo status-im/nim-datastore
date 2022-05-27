@@ -28,6 +28,8 @@ proc new*(T: type FileSystemDatastore, root = getCurrentDir() / "data"): ?!T =
   except OSError as e:
     failure e
 
+proc root*(self: FileSystemDatastore): string =
+  self.root
 method contains*(
   self: FileSystemDatastore,
   key: Key): ?!bool =
