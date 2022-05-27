@@ -55,7 +55,11 @@ method contains*(
   self: FileSystemDatastore,
   key: Key): ?!bool =
 
-  success false
+  try:
+    success fileExists(self.path(key))
+
+  except CatchableError as e:
+    failure e
 
 method delete*(
   self: FileSystemDatastore,
