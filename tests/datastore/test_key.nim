@@ -74,41 +74,28 @@ suite "Datastore Namespace":
 
   test "accessors":
     var
-      nsRes: Result[Namespace, ref CatchableError]
       ns: Namespace
 
-    nsRes = Namespace.init("", "b")
-
-    assert nsRes.isOk
-    ns = nsRes.get
+    ns = Namespace.init("", "b").get
 
     check:
       ns.value == "b"
       ns.field.isNone
 
-    nsRes = Namespace.init("a", "b")
-
-    assert nsRes.isOk
-    ns = nsRes.get
+    ns = Namespace.init("a", "b").get
 
     check:
       ns.value == "b"
       ns.field.isSome
       ns.field.get == "a"
 
-    nsRes = Namespace.init(":b")
-
-    assert nsRes.isOk
-    ns = nsRes.get
+    ns = Namespace.init(":b").get
 
     check:
       ns.value == "b"
       ns.field.isNone
 
-    nsRes = Namespace.init("a:b")
-
-    assert nsRes.isOk
-    ns = nsRes.get
+    ns = Namespace.init("a:b").get
 
     check:
       ns.value == "b"
@@ -139,22 +126,15 @@ suite "Datastore Namespace":
 
   test "serialization":
     var
-      nsRes: Result[Namespace, ref CatchableError]
       ns: Namespace
 
-    nsRes = Namespace.init(":b")
-
-    assert nsRes.isOk
-    ns = nsRes.get
+    ns = Namespace.init(":b").get
 
     check:
       ns.id == "b"
       $ns == "Namespace(" & ns.id & ")"
 
-    nsRes = Namespace.init("a:b")
-
-    assert nsRes.isOk
-    ns = nsRes.get
+    ns = Namespace.init("a:b").get
 
     check:
       ns.id == "a:b"
@@ -240,14 +220,8 @@ suite "Datastore Key":
     check: keyRes.isOk
 
   test "accessors":
-    var
-      keyRes: Result[Key, ref CatchableError]
-      key: Key
-
-    keyRes = Key.init("/a:b/c/d:e")
-
-    assert keyRes.isOk
-    key = keyRes.get
+    let
+      key = Key.init("/a:b/c/d:e").get
 
     check:
       key.namespaces == @[
@@ -292,14 +266,8 @@ suite "Datastore Key":
       Key.init("a/b/c").get != Key.init("a:X/b:X/c:X").get
 
   test "helpers":
-    var
-      keyRes: Result[Key, ref CatchableError]
-      key: Key
-
-    keyRes = Key.init("/a:b/c/d:e")
-
-    assert keyRes.isOk
-    key = keyRes.get
+    let
+      key = Key.init("/a:b/c/d:e").get
 
     check: Key.random.len == 24
 
@@ -419,17 +387,9 @@ suite "Datastore Key":
       not Key.init("f:g").get.isDescendantOf(key.parent.get)
 
   test "serialization":
-    var
-      keyRes: Result[Key, ref CatchableError]
-      key: Key
-
     let
       idStr = "/a:b/c/d:e"
-
-    keyRes = Key.init(idStr)
-
-    assert keyRes.isOk
-    key = keyRes.get
+      key = Key.init(idStr).get
 
     check:
       key.id == idStr
