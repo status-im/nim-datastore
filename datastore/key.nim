@@ -1,5 +1,6 @@
 import std/algorithm
 import std/hashes
+import std/oids
 import std/sequtils
 import std/strutils
 
@@ -24,8 +25,6 @@ const
   separator = "/"
 
 # TODO for Namespace: operator/s for combining string,string or string,Namespace|Namespace,string into a Namespace
-
-# TODO for Key: randomKey
 
 # TODO in general: lifting from Result([Namespace|Key], ref CatchableError) where not already implemented
 
@@ -153,6 +152,9 @@ proc init*(T: type Key, id: string): ?!T =
         keyRes.error.msg.split(":")[1..^1].join("").replace("\"\"", "\":\"")
 
     success key
+
+proc random*(T: type Key): string =
+  $genOid()
 
 proc namespaces*(self: Key): seq[Namespace] =
   self.namespaces

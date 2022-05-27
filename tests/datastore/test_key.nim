@@ -245,6 +245,8 @@ suite "Datastore Key":
       Key.init("a:b/c").get != Key.init("///a:b///d///").get
 
   test "accessors and helpers":
+    check: Key.random.len == 24
+
     var
       keyRes: Result[Key, ref CatchableError]
       key: Key
