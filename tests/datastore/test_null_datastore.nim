@@ -16,21 +16,21 @@ suite "NullDatastore":
   test "new":
     check: not ds.isNil
 
+  test "put":
+    check: ds.put(key, oneByte).isOk
+
+  test "delete":
+    check: ds.delete(key).isOk
+
   test "contains":
     check:
       ds.contains(key).isOk
       ds.contains(key).get == false
 
-  test "delete":
-    check: ds.delete(key).isOk
-
   test "get":
     check:
       ds.get(key).isOk
       ds.get(key).get.isNone
-
-  test "put":
-    check: ds.put(key, oneByte).isOk
 
   # test "query":
   #   check:
