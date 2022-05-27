@@ -25,7 +25,7 @@ const
 
 # TODO for Namespace: operator/s
 
-# TODO for Key: `[]` for indexing (natural/range), iterator (over namespaces), randomKey
+# TODO for Key: iterator (over namespaces), randomKey
 
 # TODO in general: lifting from Result([Namespace|Key], ref CatchableError) where not already implemented
 
@@ -159,6 +159,9 @@ proc namespaces*(self: Key): seq[Namespace] =
 
 proc list*(self: Key): seq[Namespace] =
   self.namespaces
+
+template `[]`*(key: Key, x: auto): auto =
+  key.namespaces[x]
 
 proc last*(self: Key): Namespace =
   self.namespaces[^1]

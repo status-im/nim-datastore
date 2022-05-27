@@ -263,6 +263,10 @@ suite "Datastore Key":
 
       key.list == key.namespaces
 
+      key[1] == Namespace.init("c").get
+      key[1..^1] == @[Namespace.init("c").get, Namespace.init("d:e").get]
+      key[^1] == Namespace.init("d:e").get
+
       key.last == Namespace.init("d:e").get
       key.last == key.namespaces[^1]
 
