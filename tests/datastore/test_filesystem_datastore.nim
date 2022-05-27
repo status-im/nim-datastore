@@ -70,6 +70,7 @@ suite "FileSystemDatastore":
     let
       ds = FileSystemDatastore.new(root).get
       key = Key.init("a:b/c/d:e").get
+      path = ds.path(key)
 
     var
       bytes: seq[byte]
@@ -81,7 +82,7 @@ suite "FileSystemDatastore":
 
     check:
       putRes.isOk
-      readFile(ds.path(key)).toBytes == bytes
+      readFile(path).toBytes == bytes
 
     bytes = @[4.byte, 5.byte, 6.byte]
 
@@ -89,7 +90,7 @@ suite "FileSystemDatastore":
 
     check:
       putRes.isOk
-      readFile(ds.path(key)).toBytes == bytes
+      readFile(path).toBytes == bytes
 
   test "delete":
     check:
