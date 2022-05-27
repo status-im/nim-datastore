@@ -74,7 +74,19 @@ method put*(
   key: Key,
   data: openArray[byte]): ?!void =
 
-  success()
+  let
+    path = self.path(key)
+
+  try:
+    createDir(parentDir(path))
+    writeFile(path, data)
+    success()
+
+  except IOError as e:
+    failure e
+
+  except OSError as e:
+    failure e
 
 # method query*(
 #   self: FileSystemDatastore,
