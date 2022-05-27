@@ -5,7 +5,7 @@ import pkg/questionable/results
 from pkg/stew/results as stewResults import get, isErr, isOk
 import pkg/unittest2
 
-import ../datastore/filesystem_datastore
+import ../../datastore/filesystem_datastore
 
 suite "FileSystemDatastore":
   setup:

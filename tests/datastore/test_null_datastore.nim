@@ -1,9 +1,8 @@
 import pkg/questionable
-import pkg/questionable/results
 from pkg/stew/results as stewResults import get, isOk
 import pkg/unittest2
 
-import ../datastore/null_datastore
+import ../../datastore/null_datastore
 
 const
   oneByte = @[1.byte]
@@ -13,6 +12,9 @@ suite "NullDatastore":
     let
       key = Key.init("a").get
       ds = NullDatastore.new()
+
+  test "new":
+    check: not ds.isNil
 
   test "contains":
     check:

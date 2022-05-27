@@ -153,20 +153,20 @@ proc init*(T: type Key, id: string): ?!T =
 
     success key
 
-proc random*(T: type Key): string =
-  $genOid()
-
 proc namespaces*(self: Key): seq[Namespace] =
   self.namespaces
 
 proc list*(self: Key): seq[Namespace] =
   self.namespaces
 
+proc random*(T: type Key): string =
+  $genOid()
+
 template `[]`*(key: Key, x: auto): auto =
   key.namespaces[x]
 
 proc last*(self: Key): Namespace =
-  self.namespaces[^1]
+  self[^1]
 
 proc len*(self: Key): int =
   self.namespaces.len
@@ -199,7 +199,7 @@ proc instance*(self: Key, value: Namespace): Key =
     last = self.last
 
     inst =
-      if self.last.field.isSome:
+      if last.field.isSome:
         @[Namespace(field: last.field, value: value.value)]
       else:
         @[Namespace(field: last.value.some, value: value.value)]
