@@ -165,9 +165,6 @@ proc random*(T: type Key): string =
 template `[]`*(key: Key, x: auto): auto =
   key.namespaces[x]
 
-proc last*(self: Key): Namespace =
-  self[^1]
-
 proc len*(self: Key): int =
   self.namespaces.len
 
@@ -186,17 +183,17 @@ proc reverse*(self: Key): Key =
   self.reversed
 
 proc name*(self: Key): string =
-  self.last.value
+  self[^1].value
 
 proc `type`*(self: Key): ?string =
-  self.last.field
+  self[^1].field
 
 proc kind*(self: Key): ?string =
   self.`type`
 
 proc instance*(self: Key, value: Namespace): Key =
   let
-    last = self.last
+    last = self[^1]
 
     inst =
       if last.field.isSome:
@@ -213,7 +210,7 @@ proc instance*(self: Key, value: Namespace): Key =
   Key(namespaces: namespaces)
 
 proc instance*(self: Key, value: Key): Key =
-  self.instance(value.last)
+  self.instance(value[^1])
 
 proc instance*(self: Key, id: string): ?!Key =
   without key =? Key.init(id), e:
@@ -240,7 +237,7 @@ proc path*(self: Key): ?!Key =
   let
     parent = ? self.parent
 
-  without kind =? self.last.kind:
+  without kind =? self[^1].kind:
     return success parent
 
   success Key(namespaces: parent.namespaces & @[Namespace(value: kind)])

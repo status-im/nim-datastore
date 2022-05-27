@@ -309,10 +309,6 @@ suite "Datastore Key":
       key[^1] == Namespace.init("d:e").get
 
     check:
-      key.last == Namespace.init("d:e").get
-      key.last == key.namespaces[^1]
-
-    check:
       key.len == 3
       key.len == key.namespaces.len
 
