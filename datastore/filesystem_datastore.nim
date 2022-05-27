@@ -16,6 +16,9 @@ type
 
 proc new*(T: type FileSystemDatastore, root = getCurrentDir() / "data"): ?!T =
   try:
+    let
+      root = if root.isAbsolute: root else: getCurrentDir() / root
+
     createDir(root)
     success T(root: root)
 

@@ -19,8 +19,18 @@ suite "FileSystemDatastore":
     removeDir(getCurrentDir() / root)
 
   test "new":
-    let
-      ds = FileSystemDatastore.new("tests" / "data")
+    var
+      ds = FileSystemDatastore.new(getCurrentDir() / root)
+
+    check:
+      ds.isOk
+      dirExists(getCurrentDir() / root)
+
+    removeDir(getCurrentDir() / root)
+
+    check: not dirExists(getCurrentDir() / root)
+
+    ds = FileSystemDatastore.new(root)
 
     check:
       ds.isOk
