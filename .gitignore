@@ -4,5 +4,7 @@
 .DS_Store
 .idea
 .vscode
+coverage
 datastore.nims
+nimcache
 TODO
