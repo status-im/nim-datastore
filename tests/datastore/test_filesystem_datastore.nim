@@ -93,8 +93,34 @@ suite "FileSystemDatastore":
       readFile(path).toBytes == bytes
 
   test "delete":
+    let
+      bytes = @[1.byte, 2.byte, 3.byte]
+      ds = FileSystemDatastore.new(root).get
+
+    var
+      key = Key.init("a:b/c/d:e").get
+      path = ds.path(key)
+      putRes = ds.put(key, bytes)
+
+    assert putRes.isOk
+    assert readFile(path).toBytes == bytes
+
+    var
+      delRes = ds.delete(key)
+
     check:
-      true
+      delRes.isOk
+      not fileExists(path)
+      dirExists(parentDir(path))
+
+    key = Key.init("X/Y/Z").get
+    path = ds.path(key)
+    assert not fileExists(path)
+    assert not dirExists(parentDir(path))
+
+    delRes = ds.delete(key)
+
+    check: delRes.isOk
 
   test "contains":
     check:
