@@ -61,7 +61,19 @@ method delete*(
   self: FileSystemDatastore,
   key: Key): ?!void =
 
-  success()
+  let
+    path = self.path(key)
+
+  try:
+    removeFile(path)
+    success()
+
+    # removing an empty directory might lead to surprising behavior depending
+    # on what the user specified as the `root` of the FileSystemDatastore, so
+    # until further consideration, empty directories will be left in place
+
+  except OSError as e:
+    failure e
 
 method get*(
   self: FileSystemDatastore,
