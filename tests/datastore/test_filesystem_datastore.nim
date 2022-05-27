@@ -43,6 +43,11 @@ suite "FileSystemDatastore":
 
     check: dirExists(rootAbs)
 
+  test "accessors":
+    let
+      ds = FileSystemDatastore.new(root).get
+
+    check: ds.root == rootAbs
 
     ds = FileSystemDatastore.new(root)
 
