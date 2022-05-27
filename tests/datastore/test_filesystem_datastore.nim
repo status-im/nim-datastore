@@ -49,7 +49,21 @@ suite "FileSystemDatastore":
 
     check: ds.root == rootAbs
 
-    ds = FileSystemDatastore.new(root)
+  test "helpers":
+      let
+        ds = FileSystemDatastore.new(root).get
+
+      check:
+        # see comment in ../../datastore/filesystem_datastore re: whether path
+        # equivalence of e.g. Key(/a:b) and Key(/a/b) is problematic
+        ds.path(Key.init("a").get) == rootAbs / "a.obj"
+        ds.path(Key.init("a:b").get) == rootAbs / "a" / "b.obj"
+        ds.path(Key.init("a/b").get) == rootAbs / "a" / "b.obj"
+        ds.path(Key.init("a:b/c").get) == rootAbs / "a" / "b" / "c.obj"
+        ds.path(Key.init("a/b/c").get) == rootAbs / "a" / "b" / "c.obj"
+        ds.path(Key.init("a:b/c:d").get) == rootAbs / "a" / "b" / "c" / "d.obj"
+        ds.path(Key.init("a/b/c:d").get) == rootAbs / "a" / "b" / "c" / "d.obj"
+        ds.path(Key.init("a/b/c/d").get) == rootAbs / "a" / "b" / "c" / "d.obj"
 
     check:
       ds.isOk
