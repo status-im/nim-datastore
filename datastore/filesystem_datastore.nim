@@ -24,3 +24,34 @@ proc new*(T: type FileSystemDatastore, root = getCurrentDir() / "data"): ?!T =
 
   except OSError as e:
     failure "OSError: " & e.msg
+
+method contains*(
+  self: FileSystemDatastore,
+  key: Key): ?!bool =
+
+  success false
+
+method delete*(
+  self: FileSystemDatastore,
+  key: Key): ?!void =
+
+  success()
+
+method get*(
+  self: FileSystemDatastore,
+  key: Key): ?!(?seq[byte]) =
+
+  success seq[byte].none
+
+method put*(
+  self: FileSystemDatastore,
+  key: Key,
+  data: openArray[byte]): ?!void =
+
+  success()
+
+# method query*(
+#   self: FileSystemDatastore,
+#   query: ...): ?!(?seq[seq[byte]]) =
+#
+#   success seq[seq[byte]].none

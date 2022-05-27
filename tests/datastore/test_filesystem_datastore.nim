@@ -25,3 +25,23 @@ suite "FileSystemDatastore":
     check:
       ds.isOk
       dirExists(getCurrentDir() / root)
+
+  test "contains":
+    check:
+      true
+
+  test "delete":
+    check:
+      true
+
+  test "get":
+    check:
+      true
+
+  test "put":
+    check:
+      true
+
+  # test "query":
+  #   check:
+  #     true
