@@ -12,23 +12,37 @@ suite "FileSystemDatastore":
     # assumes tests/test_all is run from project root, e.g. with `nimble test`
     let
       root = "tests" / "data"
+      rootAbs = getCurrentDir() / root
 
-    removeDir(getCurrentDir() / root)
+    removeDir(rootAbs)
+    assert not dirExists(rootAbs)
 
   teardown:
-    removeDir(getCurrentDir() / root)
+    removeDir(rootAbs)
+    assert not dirExists(rootAbs)
 
   test "new":
     var
-      ds = FileSystemDatastore.new(getCurrentDir() / root)
+      dsRes: Result[FileSystemDatastore, ref CatchableError]
+      ds: FileSystemDatastore
 
-    check:
-      ds.isOk
-      dirExists(getCurrentDir() / root)
+    dsRes = FileSystemDatastore.new(rootAbs)
 
-    removeDir(getCurrentDir() / root)
+    assert dsRes.isOk
+    ds = dsRes.get
 
-    check: not dirExists(getCurrentDir() / root)
+    check: dirExists(rootAbs)
+
+    removeDir(rootAbs)
+    assert not dirExists(rootAbs)
+
+    dsRes = FileSystemDatastore.new(root)
+
+    assert dsRes.isOk
+    ds = dsRes.get
+
+    check: dirExists(rootAbs)
+
 
     ds = FileSystemDatastore.new(root)
 
