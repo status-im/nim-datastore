@@ -14,6 +14,9 @@ type
   FileSystemDatastore* = ref object of Datastore
     root: string
 
+const
+  objectExtension = ".obj"
+
 proc new*(T: type FileSystemDatastore, root = getCurrentDir() / "data"): ?!T =
   try:
     let
@@ -30,6 +33,24 @@ proc new*(T: type FileSystemDatastore, root = getCurrentDir() / "data"): ?!T =
 
 proc root*(self: FileSystemDatastore): string =
   self.root
+
+proc path*(self: FileSystemDatastore, key: Key): string =
+  var
+    segments: seq[string]
+
+  for ns in key:
+    without field =? ns.field:
+      segments.add ns.value
+      continue
+
+    segments.add(field / ns.value)
+
+  # is it problematic that per this logic Key(/a:b) evaluates to the same path
+  # as Key(/a/b)? may need to check if/how other Datastore implementations
+  # distinguish them
+
+  self.root / joinPath(segments) & objectExtension
+
 method contains*(
   self: FileSystemDatastore,
   key: Key): ?!bool =
