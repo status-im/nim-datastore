@@ -2,6 +2,7 @@ import std/os
 
 import pkg/questionable
 import pkg/questionable/results
+import stew/byteutils
 from pkg/stew/results as stewResults import get, isErr, isOk
 import pkg/unittest2
 
@@ -65,23 +66,40 @@ suite "FileSystemDatastore":
         ds.path(Key.init("a/b/c:d").get) == rootAbs / "a" / "b" / "c" / "d.obj"
         ds.path(Key.init("a/b/c/d").get) == rootAbs / "a" / "b" / "c" / "d.obj"
 
-    check:
-      ds.isOk
-      dirExists(getCurrentDir() / root)
+  test "put":
+    let
+      ds = FileSystemDatastore.new(root).get
+      key = Key.init("a:b/c/d:e").get
 
-  test "contains":
+    var
+      bytes: seq[byte]
+
+    bytes = @[1.byte, 2.byte, 3.byte]
+
+    var
+      putRes = ds.put(key, bytes)
+
     check:
-      true
+      putRes.isOk
+      readFile(ds.path(key)).toBytes == bytes
+
+    bytes = @[4.byte, 5.byte, 6.byte]
+
+    putRes = ds.put(key, bytes)
+
+    check:
+      putRes.isOk
+      readFile(ds.path(key)).toBytes == bytes
 
   test "delete":
     check:
       true
 
-  test "get":
+  test "contains":
     check:
       true
 
-  test "put":
+  test "get":
     check:
       true
 
