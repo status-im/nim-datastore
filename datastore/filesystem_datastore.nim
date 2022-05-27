@@ -23,10 +23,10 @@ proc new*(T: type FileSystemDatastore, root = getCurrentDir() / "data"): ?!T =
     success T(root: root)
 
   except IOError as e:
-    failure "IOError: " & e.msg
+    failure e
 
   except OSError as e:
-    failure "OSError: " & e.msg
+    failure e
 
 method contains*(
   self: FileSystemDatastore,
