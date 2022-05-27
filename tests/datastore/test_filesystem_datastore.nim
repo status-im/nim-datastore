@@ -123,8 +123,34 @@ suite "FileSystemDatastore":
     check: delRes.isOk
 
   test "contains":
-    check:
-      true
+    let
+      bytes = @[1.byte, 2.byte, 3.byte]
+      ds = FileSystemDatastore.new(root).get
+
+    var
+      key = Key.init("a:b/c/d:e").get
+      path = ds.path(key)
+      putRes = ds.put(key, bytes)
+
+    assert putRes.isOk
+    assert readFile(path).toBytes == bytes
+
+    var
+      containsRes = ds.contains(key)
+
+    assert containsRes.isOk
+
+    check: containsRes.get == true
+
+    key = Key.init("X/Y/Z").get
+    path = ds.path(key)
+    assert not fileExists(path)
+    assert not dirExists(parentDir(path))
+
+    containsRes = ds.contains(key)
+    assert containsRes.isOk
+
+    check: containsRes.get == false
 
   test "get":
     check:
