@@ -273,6 +273,20 @@ suite "Datastore Key":
       key.len == 3
       key.len == key.namespaces.len
 
+    var
+      nss: seq[Namespace]
+
+    for ns in key:
+      nss.add ns
+
+    check:
+      nss == @[
+        Namespace.init("a:b").get,
+        Namespace.init("c").get,
+        Namespace.init("d:e").get
+      ]
+
+    check:
       key.reversed.namespaces == @[
         Namespace.init("d:e").get,
         Namespace.init("c").get,

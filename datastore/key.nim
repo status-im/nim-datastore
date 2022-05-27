@@ -23,9 +23,9 @@ const
   delimiter = ":"
   separator = "/"
 
-# TODO for Namespace: operator/s
+# TODO for Namespace: operator/s for combining string,string or string,Namespace|Namespace,string into a Namespace
 
-# TODO for Key: iterator (over namespaces), randomKey
+# TODO for Key: randomKey
 
 # TODO in general: lifting from Result([Namespace|Key], ref CatchableError) where not already implemented
 
@@ -168,6 +168,14 @@ proc last*(self: Key): Namespace =
 
 proc len*(self: Key): int =
   self.namespaces.len
+
+iterator items*(key: Key): Namespace {.inline.} =
+  var
+    i = 0
+
+  while i < key.len:
+    yield key[i]
+    inc i
 
 proc reversed*(self: Key): Key =
   Key(namespaces: self.namespaces.reversed)
