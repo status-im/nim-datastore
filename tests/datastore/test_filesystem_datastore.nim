@@ -1,8 +1,9 @@
+import std/options
 import std/os
 
 import pkg/questionable
 import pkg/questionable/results
-import stew/byteutils
+import pkg/stew/byteutils
 from pkg/stew/results as stewResults import get, isErr, isOk
 import pkg/unittest2
 
@@ -159,8 +160,55 @@ suite "FileSystemDatastore":
     check: containsRes.get == false
 
   test "get":
-    check:
-      true
+    let
+      ds = FileSystemDatastore.new(root).get
+
+    var
+      bytes = @[1.byte, 2.byte, 3.byte]
+      key = Key.init("a:b/c/d:e").get
+      path = ds.path(key)
+      putRes = ds.put(key, bytes)
+
+    assert putRes.isOk
+    assert readFile(path).toBytes == bytes
+
+    var
+      getRes = ds.get(key)
+
+    assert getRes.isOk
+
+    var
+      getOpt = getRes.get
+
+    assert getOpt.isSome
+
+    check: getOpt.get == bytes
+
+    bytes = @[]
+    putRes = ds.put(key, bytes)
+
+    assert putRes.isOk
+    assert readFile(path).toBytes == bytes
+
+    getRes = ds.get(key)
+    assert getRes.isOk
+
+    getOpt = getRes.get
+    assert getOpt.isSome
+
+    check: getOpt.get == bytes
+
+    key = Key.init("X/Y/Z").get
+    path = ds.path(key)
+    assert not fileExists(path)
+    assert not dirExists(parentDir(path))
+
+    getRes = ds.get(key)
+    assert getRes.isOk
+
+    getOpt = getRes.get
+
+    check: getOpt.isNone
 
   # test "query":
   #   check:
