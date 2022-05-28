@@ -75,8 +75,6 @@ suite "FileSystemDatastore":
 
     var
       bytes: seq[byte]
-
-    var
       putRes = ds.put(key, bytes)
 
     check:
@@ -164,7 +162,7 @@ suite "FileSystemDatastore":
       ds = FileSystemDatastore.new(root).get
 
     var
-      bytes = @[1.byte, 2.byte, 3.byte]
+      bytes: seq[byte]
       key = Key.init("a:b/c/d:e").get
       path = ds.path(key)
       putRes = ds.put(key, bytes)
@@ -184,7 +182,7 @@ suite "FileSystemDatastore":
 
     check: getOpt.get == bytes
 
-    bytes = @[]
+    bytes = @[1.byte, 2.byte, 3.byte]
     putRes = ds.put(key, bytes)
 
     assert putRes.isOk
