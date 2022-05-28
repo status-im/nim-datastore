@@ -95,7 +95,10 @@ method put*(
 
   try:
     createDir(parentDir(path))
-    writeFile(path, data)
+    if data.len > 0:
+      writeFile(path, data)
+    else:
+      writeFile(path, "")
     success()
 
   except IOError as e:

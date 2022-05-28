@@ -75,10 +75,16 @@ suite "FileSystemDatastore":
     var
       bytes: seq[byte]
 
-    bytes = @[1.byte, 2.byte, 3.byte]
-
     var
       putRes = ds.put(key, bytes)
+
+    check:
+      putRes.isOk
+      readFile(path).toBytes == bytes
+
+    bytes = @[1.byte, 2.byte, 3.byte]
+
+    putRes = ds.put(key, bytes)
 
     check:
       putRes.isOk
