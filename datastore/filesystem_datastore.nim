@@ -2,6 +2,7 @@ import std/os
 
 import pkg/questionable
 import pkg/questionable/results
+import pkg/stew/byteutils
 import pkg/upraises
 
 import ./datastore
@@ -83,7 +84,19 @@ method get*(
   self: FileSystemDatastore,
   key: Key): ?!(?seq[byte]) =
 
-  success seq[byte].none
+  let
+    path = self.path(key)
+    exists = ? self.contains(key)
+
+  if exists:
+    try:
+      success readFile(path).toBytes.some
+
+    except IOError as e:
+      failure e
+
+  else:
+    success seq[byte].none
 
 method put*(
   self: FileSystemDatastore,
