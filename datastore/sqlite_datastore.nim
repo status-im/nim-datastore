@@ -1,3 +1,3 @@
-import upraises
+import pkg/upraises
 
 push: {.upraises: [].}
