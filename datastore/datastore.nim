@@ -38,6 +38,6 @@ method put*(
 
 # method query*(
 #   self: Datastore,
-#   query: ...): ?!(?seq[seq[byte]]) {.base.} =
+#   query: ...): ?!(?...) {.base.} =
 #
 #   raiseAssert("Not implemented!")

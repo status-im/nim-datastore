@@ -41,6 +41,6 @@ method put*(
 
 # method query*(
 #   self: NullDatastore,
-#   query: ...): ?!(?seq[seq[byte]]) =
+#   query: ...): ?!(?...) =
 #
-#   success seq[seq[byte]].none
+#   success ....none

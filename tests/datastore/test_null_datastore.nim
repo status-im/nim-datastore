@@ -34,5 +34,5 @@ suite "NullDatastore":
 
   # test "query":
   #   check:
-  #     ds.query(key, ...).isOk
-  #     ds.query(key, ...).get.isNone
+  #     ds.query(...).isOk
+  #     ds.query(...).get.isNone

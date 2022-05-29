@@ -153,6 +153,6 @@ method put*(
 
 # method query*(
 #   self: FileSystemDatastore,
-#   query: ...): ?!(?seq[seq[byte]]) =
+#   query: ...): ?!(?...) =
 #
-#   success seq[seq[byte]].none
+#   success ....none
