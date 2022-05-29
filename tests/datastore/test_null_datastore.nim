@@ -1,5 +1,6 @@
-import pkg/questionable
-from pkg/stew/results as stewResults import get, isOk
+import std/options
+
+import pkg/stew/results
 import pkg/unittest2
 
 import ../../datastore/null_datastore

@@ -1,10 +1,8 @@
 import std/options
 import std/os
 
-import pkg/questionable
-import pkg/questionable/results
 import pkg/stew/byteutils
-from pkg/stew/results as stewResults import get, isErr, isOk
+import pkg/stew/results
 import pkg/unittest2
 
 import ../../datastore/filesystem_datastore
