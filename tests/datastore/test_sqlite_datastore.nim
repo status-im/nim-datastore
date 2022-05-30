@@ -12,7 +12,7 @@ suite "SQLiteDatastore":
   setup:
     # assumes tests/test_all is run from project root, e.g. with `nimble test`
     let
-      dbPath = "tests" / "data" / "data" & dbExt
+      dbPath = "tests" / "data" / "store" & dbExt
       dbPathAbs = getCurrentDir() / dbPath
 
     removeDir(dbPathAbs)
