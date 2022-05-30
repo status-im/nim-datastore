@@ -15,7 +15,7 @@ type
     root: string
 
 const
-  objectExtension = ".obj"
+  objExt* = ".obj"
 
 proc new*(T: type FileSystemDatastore, root = getCurrentDir() / "data"): ?!T =
   try:
@@ -49,7 +49,7 @@ proc path*(self: FileSystemDatastore, key: Key): string =
   # as Key(/a/b)? may need to check if/how other Datastore implementations
   # distinguish them
 
-  self.root / joinPath(segments) & objectExtension
+  self.root / joinPath(segments) & objExt
 
 method contains*(
   self: FileSystemDatastore,

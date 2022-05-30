@@ -17,12 +17,11 @@ type
     dbPath: string
 
 const
-  dbExtension = ".sqlite3"
-  dbExt* = dbExtension
+  dbExt* = ".sqlite3"
 
 proc new*(
   T: type SQLiteDatastore,
-  dbPath = getCurrentDir() / "data" / "data" & dbExtension): ?!T =
+  dbPath = getCurrentDir() / "data" / "store" & dbExt): ?!T =
 
   # should initialize the db file, but should connection be open or closed when
   # `new` returns?
