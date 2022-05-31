@@ -17,10 +17,14 @@ type
 const
   objExt* = ".obj"
 
-proc new*(T: type FileSystemDatastore, root = getCurrentDir() / "data"): ?!T =
+proc new*(
+  T: type FileSystemDatastore,
+  root = "data"): ?!T =
+
   try:
     let
-      root = if root.isAbsolute: root else: getCurrentDir() / root
+      root = if root.isAbsolute: root
+             else: getCurrentDir() / root
 
     createDir(root)
     success T(root: root)
@@ -34,7 +38,10 @@ proc new*(T: type FileSystemDatastore, root = getCurrentDir() / "data"): ?!T =
 proc root*(self: FileSystemDatastore): string =
   self.root
 
-proc path*(self: FileSystemDatastore, key: Key): string =
+proc path*(
+  self: FileSystemDatastore,
+  key: Key): string =
+
   var
     segments: seq[string]
 
@@ -55,11 +62,7 @@ method contains*(
   self: FileSystemDatastore,
   key: Key): ?!bool =
 
-  try:
-    success fileExists(self.path(key))
-
-  except CatchableError as e:
-    failure e
+  success fileExists(self.path(key))
 
 method delete*(
   self: FileSystemDatastore,
@@ -139,10 +142,8 @@ method put*(
 
   try:
     createDir(parentDir(path))
-    if data.len > 0:
-      writeFile(path, data)
-    else:
-      writeFile(path, "")
+    if data.len > 0: writeFile(path, data)
+    else: writeFile(path, "")
     success()
 
   except IOError as e:

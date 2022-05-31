@@ -11,7 +11,7 @@ suite "FileSystemDatastore":
   setup:
     # assumes tests/test_all is run from project root, e.g. with `nimble test`
     let
-      root = "tests" / "data"
+      root = "tests" / "test_data"
       rootAbs = getCurrentDir() / root
 
     removeDir(rootAbs)
@@ -106,7 +106,6 @@ suite "FileSystemDatastore":
       putRes = ds.put(key, bytes)
 
     assert putRes.isOk
-    assert readFile(path).toBytes == bytes
 
     var
       delRes = ds.delete(key)
@@ -119,7 +118,6 @@ suite "FileSystemDatastore":
     key = Key.init("X/Y/Z").get
     path = ds.path(key)
     assert not fileExists(path)
-    assert not dirExists(parentDir(path))
 
     delRes = ds.delete(key)
 
@@ -136,7 +134,6 @@ suite "FileSystemDatastore":
       putRes = ds.put(key, bytes)
 
     assert putRes.isOk
-    assert readFile(path).toBytes == bytes
 
     var
       containsRes = ds.contains(key)
@@ -148,7 +145,6 @@ suite "FileSystemDatastore":
     key = Key.init("X/Y/Z").get
     path = ds.path(key)
     assert not fileExists(path)
-    assert not dirExists(parentDir(path))
 
     containsRes = ds.contains(key)
     assert containsRes.isOk
@@ -166,42 +162,29 @@ suite "FileSystemDatastore":
       putRes = ds.put(key, bytes)
 
     assert putRes.isOk
-    assert readFile(path).toBytes == bytes
 
     var
       getRes = ds.get(key)
-
-    assert getRes.isOk
-
-    var
       getOpt = getRes.get
 
-    assert getOpt.isSome
-
-    check: getOpt.get == bytes
+    check: getOpt.isSome and getOpt.get == bytes
 
     bytes = @[1.byte, 2.byte, 3.byte]
     putRes = ds.put(key, bytes)
 
     assert putRes.isOk
-    assert readFile(path).toBytes == bytes
 
     getRes = ds.get(key)
-    assert getRes.isOk
-
     getOpt = getRes.get
-    assert getOpt.isSome
 
-    check: getOpt.get == bytes
+    check: getOpt.isSome and getOpt.get == bytes
 
     key = Key.init("X/Y/Z").get
     path = ds.path(key)
+
     assert not fileExists(path)
-    assert not dirExists(parentDir(path))
 
     getRes = ds.get(key)
-    assert getRes.isOk
-
     getOpt = getRes.get
 
     check: getOpt.isNone

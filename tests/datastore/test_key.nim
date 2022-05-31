@@ -84,8 +84,7 @@ suite "Datastore Namespace":
 
     check:
       ns.value == "b"
-      ns.field.isSome
-      ns.field.get == "a"
+      ns.field.isSome and ns.field.get == "a"
 
     ns = Namespace.init(":b").get
 
@@ -97,8 +96,7 @@ suite "Datastore Namespace":
 
     check:
       ns.value == "b"
-      ns.field.isSome
-      ns.field.get == "a"
+      ns.field.isSome and ns.field.get == "a"
 
     check:
       ns.`type`.get == ns.field.get
@@ -142,8 +140,6 @@ suite "Datastore Key":
   test "init":
     var
       keyRes: Result[Key, ref CatchableError]
-
-    var
       nss: seq[Namespace]
 
     keyRes = Key.init(nss)
@@ -185,14 +181,6 @@ suite "Datastore Key":
 
     check: keyRes.isErr
 
-    keyRes = Key.init(":")
-
-    check: keyRes.isErr
-
-    keyRes = Key.init("::")
-
-    check: keyRes.isErr
-
     keyRes = Key.init("/")
 
     check: keyRes.isErr
@@ -201,11 +189,35 @@ suite "Datastore Key":
 
     check: keyRes.isErr
 
+    keyRes = Key.init(":")
+
+    check: keyRes.isErr
+
+    keyRes = Key.init("::")
+
+    check: keyRes.isErr
+
+    keyRes = Key.init("a:")
+
+    check: keyRes.isErr
+
+    keyRes = Key.init("a:b/c:")
+
+    check: keyRes.isErr
+
+    keyRes = Key.init(":b")
+
+    check: keyRes.isOk
+
     keyRes = Key.init("a:b")
 
     check: keyRes.isOk
 
     keyRes = Key.init("a:b/c")
+
+    check: keyRes.isOk
+
+    keyRes = Key.init("a:b/:c")
 
     check: keyRes.isOk
 
@@ -232,14 +244,10 @@ suite "Datastore Key":
 
   test "equality":
     check:
-      Key.init(Namespace.init("a:b").get, Namespace.init("c").get).get ==
-        Key.init("a:b/c").get
-
+      Key.init(Namespace.init("a:b").get, Namespace.init("c").get).get == Key.init("a:b/c").get
       Key.init("a:b", "c").get == Key.init("a:b/c").get
       Key.init("a:b/c").get == Key.init("a:b/c").get
-      Key.init(Namespace.init("a:b").get, Namespace.init("c").get).get !=
-        Key.init("c:b/a").get
-
+      Key.init(Namespace.init("a:b").get, Namespace.init("c").get).get != Key.init("c:b/a").get
       Key.init("a:b", "c").get != Key.init("c:b/a").get
       Key.init("a:b/c").get != Key.init("c:b/a").get
       Key.init("a:b/c").get == Key.init("/a:b/c/").get
@@ -264,19 +272,17 @@ suite "Datastore Key":
       Key.init("a/b/c").get != Key.init("a:X/b:X/c:X").get
 
   test "helpers":
+    check: Key.random.len == 24
+
     let
       key = Key.init("/a:b/c/d:e").get
-
-    check: Key.random.len == 24
 
     check:
       key[1] == Namespace.init("c").get
       key[1..^1] == @[Namespace.init("c").get, Namespace.init("d:e").get]
       key[^1] == Namespace.init("d:e").get
 
-    check:
-      key.len == 3
-      key.len == key.namespaces.len
+    check: key.len == key.namespaces.len
 
     var
       nss: seq[Namespace]
@@ -303,18 +309,18 @@ suite "Datastore Key":
     check: key.name == "e"
 
     check:
-      key.`type` == "d".some
+      key.`type` == key[^1].`type`
       key.kind == key.`type`
 
     check:
       key.instance(Namespace.init("f:g").get) == Key.init("a:b/c/d:g").get
-      Key.init("a:b").get.instance(Namespace.init(":c").get) ==
-        Key.init("a:c").get
-
-      Key.init(":b").get.instance(Namespace.init(":c").get) ==
-        Key.init("b:c").get
-
+      Key.init("a:b").get.instance(Namespace.init(":c").get) == Key.init("a:c").get
+      Key.init(":b").get.instance(Namespace.init(":c").get) == Key.init("b:c").get
       Key.init(":b").get.instance(key) == Key.init("b:e").get
+      Namespace.init("a:b").get.instance(Namespace.init("c").get) == Key.init("a:c").get
+      Namespace.init(":b").get.instance(Namespace.init("c").get) == Key.init("b:c").get
+      Namespace.init("a:b").get.instance(key) == Key.init("a:e").get
+      Namespace.init(":b").get.instance(key) == Key.init("b:e").get
       Key.init(":b").get.instance("").isErr
       Key.init(":b").get.instance(":").isErr
       Key.init(":b").get.instance("/").isErr
@@ -324,6 +330,10 @@ suite "Datastore Key":
       Key.init(":b").get.instance(":b").get == Key.init("b:b").get
       Key.init(":b").get.instance("a:b").get == Key.init("b:b").get
       Key.init(":b").get.instance("/a:b/c/d:e").get == Key.init("b:e").get
+      Key.init("a:b").get.instance("a").get == Key.init("a:a").get
+      Key.init("a:b").get.instance(":b").get == Key.init("a:b").get
+      Key.init("a:b").get.instance("a:b").get == Key.init("a:b").get
+      Key.init("a:b").get.instance("/a:b/c/d:e").get == Key.init("a:e").get
 
     check:
       Key.init(":b").get.isTopLevel
@@ -378,7 +388,7 @@ suite "Datastore Key":
 
     check:
       not key.isAncestorOf(Key.init("f:g").get)
-      key.isAncestorOf(key.child(Key.init("f:g").get))
+      key.isAncestorOf(key / Key.init("f:g").get)
 
     check:
       key.isDescendantOf(key.parent.get)
