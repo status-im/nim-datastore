@@ -22,7 +22,7 @@ suite "SQLiteDatastore":
 
     db = nil
     removeDir(dbPathAbs)
-    assert not dirExists(basePathAbs)
+    require(not dirExists(basePathAbs))
 
   teardown:
     if not db.isNil:
@@ -30,7 +30,7 @@ suite "SQLiteDatastore":
       db = nil
 
     removeDir(basePathAbs)
-    assert not dirExists(basePathAbs)
+    require(not dirExists(basePathAbs))
 
   test "new":
     var

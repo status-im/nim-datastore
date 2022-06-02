@@ -15,11 +15,11 @@ suite "FileSystemDatastore":
       rootAbs = getCurrentDir() / root
 
     removeDir(rootAbs)
-    assert not dirExists(rootAbs)
+    require(not dirExists(rootAbs))
 
   teardown:
     removeDir(rootAbs)
-    assert not dirExists(rootAbs)
+    require(not dirExists(rootAbs))
 
   test "new":
     var
