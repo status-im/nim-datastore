@@ -108,9 +108,9 @@ suite "SQLiteDatastore":
 
     check: not ds.env.isNil
 
-  test "helpers":
-    check:
-      true
+  # test "helpers":
+  #   check:
+  #     true
 
   test "put":
     check:
