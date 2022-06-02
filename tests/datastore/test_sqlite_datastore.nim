@@ -11,7 +11,7 @@ import ../../datastore/sqlite_datastore
 suite "SQLiteDatastore":
   setup:
     var
-      db: SQLiteDatastore
+      ds: SQLiteDatastore
 
     # assumes tests/test_all is run from project root, e.g. with `nimble test`
     let
@@ -20,70 +20,70 @@ suite "SQLiteDatastore":
       filename = "test_store" & dbExt
       dbPathAbs = basePathAbs / filename
 
-    db = nil
+    ds = nil
     removeDir(dbPathAbs)
     require(not dirExists(basePathAbs))
 
   teardown:
-    if not db.isNil:
-      db.close
-      db = nil
+    if not ds.isNil:
+      ds.close
+      ds = nil
 
     removeDir(basePathAbs)
     require(not dirExists(basePathAbs))
 
   test "new":
     var
-      dbRes: Result[SQLiteDatastore, ref CatchableError]
+      dsRes: Result[SQLiteDatastore, ref CatchableError]
 
-    dbRes = SQLiteDatastore.new(basePathAbs, filename)
+    dsRes = SQLiteDatastore.new(basePathAbs, filename)
 
-    assert dbRes.isOk
-    db = dbRes.get
+    assert dsRes.isOk
+    ds = dsRes.get
 
     check:
       dirExists(basePathAbs)
       fileExists(dbPathAbs)
 
-    db.close
-    db = nil
+    ds.close
+    ds = nil
     removeDir(basePathAbs)
     assert not dirExists(basePathAbs)
 
-    dbRes = SQLiteDatastore.new(basePath, filename)
+    dsRes = SQLiteDatastore.new(basePath, filename)
 
-    assert dbRes.isOk
-    db = dbRes.get
+    assert dsRes.isOk
+    ds = dsRes.get
 
     check:
       dirExists(basePathAbs)
       fileExists(dbPathAbs)
 
-    db.close
-    db = nil
+    ds.close
+    ds = nil
 
     # for `readOnly = true` to succeed the database file must already exist on
     # disk, so the existing file (per previous step) is not deleted prior to
     # the next invocation of SQLiteDatastore.new
 
-    dbRes = SQLiteDatastore.new(basePath, filename, readOnly = true)
+    dsRes = SQLiteDatastore.new(basePath, filename, readOnly = true)
 
-    assert dbRes.isOk
-    db = dbRes.get
+    assert dsRes.isOk
+    ds = dsRes.get
 
     check:
       dirExists(basePathAbs)
       fileExists(dbPathAbs)
 
-    db.close
-    db = nil
+    ds.close
+    ds = nil
     removeDir(basePathAbs)
     assert not dirExists(basePathAbs)
 
-    dbRes = SQLiteDatastore.new(inMemory = true)
+    dsRes = SQLiteDatastore.new(inMemory = true)
 
-    assert dbRes.isOk
-    db = dbRes.get
+    assert dsRes.isOk
+    ds = dsRes.get
 
     check:
       not dirExists(basePathAbs)
@@ -92,18 +92,21 @@ suite "SQLiteDatastore":
     ds.close
     ds = nil
 
-    dbRes = SQLiteDatastore.new(readOnly = true, inMemory = true)
+    dsRes = SQLiteDatastore.new(readOnly = true, inMemory = true)
 
-    assert dbRes.isOk
-    db = dbRes.get
+    assert dsRes.isOk
+    ds = dsRes.get
 
     check:
       not dirExists(basePathAbs)
       not fileExists(dbPathAbs)
 
   test "accessors":
-    check:
-      true
+    ds = SQLiteDatastore.new(basePath).get
+
+    check: parentDir(ds.dbPath) == basePathAbs
+
+    check: not ds.env.isNil
 
   test "helpers":
     check:
