@@ -134,7 +134,7 @@ proc new*(
 
     checkExec(s)
 
-  template checkWalPragmaResult(journalModePragma: ptr sqlite3_stmt) =
+  template checkJournalModePragmaResult(journalModePragma: ptr sqlite3_stmt) =
     if (let x = sqlite3_step(journalModePragma); x != SQLITE_ROW):
       discard sqlite3_finalize(journalModePragma)
       return failure $sqlite3_errstr(x)
@@ -151,7 +151,7 @@ proc new*(
   let
     journalModePragma = prepare("PRAGMA journal_mode = WAL;"): discard
 
-  checkWalPragmaResult(journalModePragma)
+  checkJournalModePragmaResult(journalModePragma)
   checkExec(journalModePragma)
 
   if not readOnly:
