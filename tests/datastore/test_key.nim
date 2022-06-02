@@ -5,7 +5,7 @@ import pkg/unittest2
 
 import ../../datastore/key
 
-suite "Datastore Namespace":
+suite "Namespace":
   test "init":
     var
       nsRes: Result[Namespace, ref CatchableError]
@@ -136,7 +136,7 @@ suite "Datastore Namespace":
       ns.id == "a:b"
       $ns == "Namespace(" & ns.id & ")"
 
-suite "Datastore Key":
+suite "Key":
   test "init":
     var
       keyRes: Result[Key, ref CatchableError]
