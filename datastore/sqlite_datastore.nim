@@ -383,34 +383,37 @@ proc timestampCol*(
 
   sqlite3_column_int64(s, index)
 
-proc rawQuery*(self: SQLiteDatastore, query: string, onData: DataProc): ?!bool =
+proc rawQuery*(
+  self: SQLiteDatastore,
+  query: string,
+  onData: DataProc): ?!bool =
+
   var
     s = prepare(self.env, query): discard
 
-  try:
-    var
-      gotResults = false
+  var
+    res = success false
 
-    while true:
-      let
-        v = sqlite3_step(s)
+  while true:
+    let
+      v = sqlite3_step(s)
 
-      case v
-      of SQLITE_ROW:
-        onData(s)
-        gotResults = true
-      of SQLITE_DONE:
-        break
-      else:
-        return failure $sqlite3_errstr(v)
+    case v
+    of SQLITE_ROW:
+      onData(s)
+      res = success true
+    of SQLITE_DONE:
+      break
+    else:
+      res = failure $sqlite3_errstr(v)
 
-    return success gotResults
-  finally:
-    # release implicit transaction
-    discard sqlite3_reset(s) # same return information as step
-    discard sqlite3_clear_bindings(s) # no errors possible
-    # NB: dispose of the prepared query statement and free associated memory
-    discard sqlite3_finalize(s)
+  # release implicit transaction
+  discard sqlite3_reset(s) # same return information as step
+  discard sqlite3_clear_bindings(s) # no errors possible
+  # NB: dispose of the prepared query statement and free associated memory
+  discard sqlite3_finalize(s)
+
+  res
 
 proc prepareStmt*(
   self: SQLiteDatastore,
