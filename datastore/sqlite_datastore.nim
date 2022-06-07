@@ -1,8 +1,10 @@
 import std/os
+import std/times
 
 import pkg/questionable
 import pkg/questionable/results
 import pkg/sqlite3_abi
+import pkg/stew/byteutils
 import pkg/upraises
 
 import ./datastore
@@ -18,23 +20,32 @@ type
   AutoDisposed[T: ptr|ref] = object
     val: T
 
-  NoParams = tuple # empty tuple
+  NoParams* = tuple # empty tuple
 
-  RawStmtPtr = ptr sqlite3_stmt
+  RawStmtPtr* = ptr sqlite3_stmt
 
-  SQLite = ptr sqlite3
+  DataProc* = proc(s: RawStmtPtr) {.closure.}
+
+  SQLite* = ptr sqlite3
+
+  SQLiteStmt*[Params, Result] = distinct RawStmtPtr
+
+  PutStmt = SQLiteStmt[(seq[byte], seq[byte], int64), void]
 
   SQLiteDatastore* = ref object of Datastore
     dbPath: string
     env: SQLite
-
-  SQLiteStmt[Params, Result] = distinct RawStmtPtr
+    putStmt: PutStmt
+    readOnly: bool
 
 const
-  TableTitle = "Store"
+  TableTitle* = "Store"
   TimestampTableType = "INTEGER"
 
   dbExt* = ".sqlite3"
+
+proc timestamp*(): int64 =
+  (epochTime() * 1_000_000).int64
 
 template dispose(db: SQLite) =
   discard sqlite3_close(db)
@@ -60,6 +71,81 @@ template checkErr(op, cleanup: untyped) =
 
 template checkErr(op) =
   checkErr(op): discard
+
+template prepare(
+  env: SQLite,
+  q: string,
+  cleanup: untyped): RawStmtPtr =
+
+  var
+    s: RawStmtPtr
+
+  checkErr sqlite3_prepare_v2(env, q.cstring, q.len.cint, addr s, nil):
+    cleanup
+
+  s
+
+proc bindParam(
+  s: RawStmtPtr,
+  n: int,
+  val: auto): cint =
+
+  when val is openarray[byte]|seq[byte]:
+    if val.len > 0:
+      sqlite3_bind_blob(s, n.cint, unsafeAddr val[0], val.len.cint, nil)
+    else:
+      sqlite3_bind_blob(s, n.cint, nil, 0.cint, nil)
+  elif val is int32:
+    sqlite3_bind_int(s, n.cint, val)
+  elif val is uint32:
+    sqlite3_bind_int(s, int(n).cint, int(val).cint)
+  elif val is int64:
+    sqlite3_bind_int64(s, n.cint, val)
+  elif val is float64:
+    sqlite3_bind_double(s, n.cint, val)
+  # Note: bind_text not yet supported in sqlite3_abi wrapper
+  # elif val is string:
+  #   # `-1` implies string length is number of bytes up to first null-terminator
+  #   sqlite3_bind_text(s, n.cint, val.cstring, -1, nil)
+  else:
+    {.fatal: "Please add support for the '" & $typeof(val) & "' type".}
+
+template bindParams(
+  s: RawStmtPtr,
+  params: auto) =
+
+  when params is tuple:
+    var
+      i = 1
+
+    for param in fields(params):
+      checkErr bindParam(s, i, param)
+      inc i
+
+  else:
+    checkErr bindParam(s, 1, params)
+
+proc exec*[P](
+  s: SQLiteStmt[P, void],
+  params: P): ?!void =
+
+  let
+    s = RawStmtPtr s
+
+  bindParams(s, params)
+
+  let
+    res =
+      if (let v = sqlite3_step(s); v != SQLITE_DONE):
+        failure $sqlite3_errstr(v)
+      else:
+        success()
+
+  # release implict transaction
+  discard sqlite3_reset(s) # same return information as step
+  discard sqlite3_clear_bindings(s) # no errors possible
+
+  res
 
 proc new*(
   T: type SQLiteDatastore,
@@ -116,17 +202,17 @@ proc new*(
 
   template prepare(
     q: string,
-    cleanup: untyped): ptr sqlite3_stmt =
+    cleanup: untyped): RawStmtPtr =
 
     var
-      stmt: ptr sqlite3_stmt
+      s: RawStmtPtr
 
-    checkErr sqlite3_prepare_v2(env.val, q, q.len.cint, addr stmt, nil):
+    checkErr sqlite3_prepare_v2(env.val, q.cstring, q.len.cint, addr s, nil):
       cleanup
 
-    stmt
+    s
 
-  template checkExec(s: ptr sqlite3_stmt) =
+  template checkExec(s: RawStmtPtr) =
     if (let x = sqlite3_step(s); x != SQLITE_DONE):
       discard sqlite3_finalize(s)
       return failure $sqlite3_errstr(x)
@@ -140,7 +226,7 @@ proc new*(
 
     checkExec(s)
 
-  template checkJournalModePragmaResult(journalModePragma: ptr sqlite3_stmt) =
+  template checkJournalModePragmaResult(journalModePragma: RawStmtPtr) =
     if (let x = sqlite3_step(journalModePragma); x != SQLITE_ROW):
       discard sqlite3_finalize(journalModePragma)
       return failure $sqlite3_errstr(x)
@@ -160,20 +246,30 @@ proc new*(
   checkJournalModePragmaResult(journalModePragma)
   checkExec(journalModePragma)
 
+  var
+    putStmt: RawStmtPtr
+
   if not readOnly:
     let
       createStmt = prepare("""
         CREATE TABLE IF NOT EXISTS """ & TableTitle & """ (
-            key BLOB NOT NULL PRIMARY KEY,
-            data BLOB,
-            timestamp """ & TimestampTableType & """ NOT NULL
+          id BLOB NOT NULL PRIMARY KEY,
+          data BLOB,
+          timestamp """ & TimestampTableType & """ NOT NULL
         ) WITHOUT ROWID;
-        """
-      ): discard
+      """): discard
 
     checkExec createStmt
 
-  success T(dbPath: dbPath, env: env.release)
+    putStmt = prepare("""
+      REPLACE INTO """ & TableTitle & """ (
+        id, data, timestamp
+      ) VALUES (?, ?, ?);
+      """
+    ): discard
+
+  success T(dbPath: dbPath, env: env.release, putStmt: PutStmt(putStmt),
+            readOnly: readOnly)
 
 proc dbPath*(self: SQLiteDatastore): string =
   self.dbPath
@@ -184,6 +280,84 @@ proc env*(self: SQLiteDatastore): SQLite =
 proc close*(self: SQLiteDatastore) =
   discard sqlite3_close(self.env)
   self[] = SQLiteDatastore()[]
+
+proc idCol*(
+  self: SQLiteDatastore,
+  s: RawStmtPtr): string =
+
+  const
+    index = 0
+
+  let
+    idBytes = cast[ptr UncheckedArray[byte]](sqlite3_column_blob(s, index))
+    idLen = sqlite3_column_bytes(s, index)
+
+  string.fromBytes(@(toOpenArray(idBytes, 0, idLen - 1)))
+
+proc dataCol*(
+  self: SQLiteDatastore,
+  s: RawStmtPtr): seq[byte] =
+
+  const
+    index = 1
+
+  let
+    dataBytes = cast[ptr UncheckedArray[byte]](sqlite3_column_blob(s, index))
+    dataLen = sqlite3_column_bytes(s, index)
+
+  @(toOpenArray(dataBytes, 0, dataLen - 1))
+
+proc timestampCol*(
+  self: SQLiteDatastore,
+  s: RawStmtPtr): int64 =
+
+  const
+    index = 2
+
+  sqlite3_column_int64(s, index)
+
+proc rawQuery*(self: SQLiteDatastore, query: string, onData: DataProc): ?!bool =
+  var
+    s = prepare(self.env, query): discard
+
+  try:
+    var
+      gotResults = false
+
+    while true:
+      let
+        v = sqlite3_step(s)
+
+      case v
+      of SQLITE_ROW:
+        onData(s)
+        gotResults = true
+      of SQLITE_DONE:
+        break
+      else:
+        return failure $sqlite3_errstr(v)
+
+    return success gotResults
+  finally:
+    # release implicit transaction
+    discard sqlite3_reset(s) # same return information as step
+    discard sqlite3_clear_bindings(s) # no errors possible
+    # NB: dispose of the prepared query statement and free associated memory
+    discard sqlite3_finalize(s)
+
+proc prepareStmt*(
+  self: SQLiteDatastore,
+  stmt: string,
+  Params: type,
+  Res: type): ?!SQLiteStmt[Params, Res] =
+
+  var
+    s: RawStmtPtr
+
+  checkErr sqlite3_prepare_v2(
+    self.env, stmt.cstring, stmt.len.cint, addr s, nil)
+
+  success SQLiteStmt[Params, Res](s)
 
 method contains*(
   self: SQLiteDatastore,
@@ -206,9 +380,13 @@ method get*(
 method put*(
   self: SQLiteDatastore,
   key: Key,
-  data: openArray[byte]): ?!void =
+  data: openArray[byte],
+  timestamp = timestamp()): ?!void =
 
-  success()
+  if self.readOnly:
+    failure "database is read-only"
+  else:
+    self.putStmt.exec((key.id.toBytes, @data, timestamp))
 
 # method query*(
 #   self: SQLiteDatastore,
