@@ -104,9 +104,14 @@ suite "SQLiteDatastore":
 
     check: not ds.env.isNil
 
-  # test "helpers":
-  #   check:
-  #     true
+  test "helpers":
+    ds = SQLiteDatastore.new(basePath).get
+
+    ds.close
+
+    check: ds.env.isNil
+
+    ds = nil
 
   test "put":
     let

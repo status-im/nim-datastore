@@ -232,7 +232,7 @@ proc query*(
   discard sqlite3_reset(s) # same return information as step
   discard sqlite3_clear_bindings(s) # no errors possible
   # NB: dispose of the prepared query statement and free associated memory
-  discard sqlite3_finalize(s)
+  s.dispose
 
   res
 
@@ -303,7 +303,7 @@ proc new*(
 
   template checkExec(s: RawStmtPtr) =
     if (let x = sqlite3_step(s); x != SQLITE_DONE):
-      discard sqlite3_finalize(s)
+      s.dispose
       return failure $sqlite3_errstr(x)
 
     if (let x = sqlite3_finalize(s); x != SQLITE_OK):
@@ -317,16 +317,16 @@ proc new*(
 
   template checkJournalModePragmaResult(journalModePragma: RawStmtPtr) =
     if (let x = sqlite3_step(journalModePragma); x != SQLITE_ROW):
-      discard sqlite3_finalize(journalModePragma)
+      journalModePragma.dispose
       return failure $sqlite3_errstr(x)
 
     if (let x = sqlite3_column_type(journalModePragma, 0); x != SQLITE3_TEXT):
-      discard sqlite3_finalize(journalModePragma)
+      journalModePragma.dispose
       return failure $sqlite3_errstr(x)
 
     if (let x = sqlite3_column_text(journalModePragma, 0);
         x != "memory" and x != "wal"):
-      discard sqlite3_finalize(journalModePragma)
+      journalModePragma.dispose
       return failure "Invalid pragma result: " & $x
 
   let
@@ -397,7 +397,14 @@ proc env*(self: SQLiteDatastore): SQLite =
   self.env
 
 proc close*(self: SQLiteDatastore) =
-  discard sqlite3_close(self.env)
+  self.containsStmt.dispose
+  self.getStmt.dispose
+
+  if not self.readOnly:
+    self.deleteStmt.dispose
+    self.putStmt.dispose
+
+  self.env.dispose
   self[] = SQLiteDatastore()[]
 
 proc timestamp*(): int64 =
