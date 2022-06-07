@@ -348,10 +348,7 @@ proc close*(self: SQLiteDatastore) =
   discard sqlite3_close(self.env)
   self[] = SQLiteDatastore()[]
 
-proc idCol*(
-  self: SQLiteDatastore,
-  s: RawStmtPtr): string =
-
+proc idCol*(s: RawStmtPtr): string =
   const
     index = 0
 
@@ -361,10 +358,7 @@ proc idCol*(
 
   string.fromBytes(@(toOpenArray(idBytes, 0, idLen - 1)))
 
-proc dataCol*(
-  self: SQLiteDatastore,
-  s: RawStmtPtr): seq[byte] =
-
+proc dataCol*(s: RawStmtPtr): seq[byte] =
   const
     index = 1
 
@@ -374,22 +368,19 @@ proc dataCol*(
 
   @(toOpenArray(dataBytes, 0, dataLen - 1))
 
-proc timestampCol*(
-  self: SQLiteDatastore,
-  s: RawStmtPtr): int64 =
-
+proc timestampCol*(s: RawStmtPtr): int64 =
   const
     index = 2
 
   sqlite3_column_int64(s, index)
 
-proc rawQuery*(
-  self: SQLiteDatastore,
+proc query*(
+  env: SQLite,
   query: string,
   onData: DataProc): ?!bool =
 
   var
-    s = prepare(self.env, query): discard
+    s = prepare(env, query): discard
 
   var
     res = success false
@@ -416,7 +407,7 @@ proc rawQuery*(
   res
 
 proc prepareStmt*(
-  self: SQLiteDatastore,
+  env: SQLite,
   stmt: string,
   Params: type,
   Res: type): ?!SQLiteStmt[Params, Res] =
@@ -424,8 +415,7 @@ proc prepareStmt*(
   var
     s: RawStmtPtr
 
-  checkErr sqlite3_prepare_v2(
-    self.env, stmt.cstring, stmt.len.cint, addr s, nil)
+  checkErr sqlite3_prepare_v2(env, stmt.cstring, stmt.len.cint, addr s, nil)
 
   success SQLiteStmt[Params, Res](s)
 

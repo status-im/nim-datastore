@@ -138,7 +138,7 @@ suite "SQLiteDatastore":
     check: putRes.isOk
 
     let
-      rawQuery = "SELECT * FROM " & TableTitle & ";"
+      query = "SELECT * FROM " & TableTitle & ";"
 
     var
       qId: string
@@ -147,13 +147,13 @@ suite "SQLiteDatastore":
       rowCount = 0
 
     proc onData(s: RawStmtPtr) {.closure.} =
-      qId = ds.idCol(s)
-      qData = ds.dataCol(s)
-      qTimestamp = ds.timestampCol(s)
+      qId = idCol(s)
+      qData = dataCol(s)
+      qTimestamp = timestampCol(s)
       inc rowCount
 
     var
-      qRes = ds.rawQuery(rawQuery, onData)
+      qRes = ds.env.query(query, onData)
 
     assert qRes.isOk
 
@@ -171,7 +171,7 @@ suite "SQLiteDatastore":
     check: putRes.isOk
 
     rowCount = 0
-    qRes = ds.rawQuery(rawQuery, onData)
+    qRes = ds.env.query(query, onData)
     assert qRes.isOk
 
     check:
@@ -188,7 +188,7 @@ suite "SQLiteDatastore":
     check: putRes.isOk
 
     rowCount = 0
-    qRes = ds.rawQuery(rawQuery, onData)
+    qRes = ds.env.query(query, onData)
     assert qRes.isOk
 
     check:
@@ -229,7 +229,7 @@ suite "SQLiteDatastore":
     assert putRes.isOk
 
     let
-      rawQuery = "SELECT * FROM " & TableTitle & ";"
+      query = "SELECT * FROM " & TableTitle & ";"
 
     var
       rowCount = 0
@@ -238,7 +238,7 @@ suite "SQLiteDatastore":
       inc rowCount
 
     var
-      qRes = ds.rawQuery(rawQuery, onData)
+      qRes = ds.env.query(query, onData)
 
     assert qRes.isOk
     check: rowCount == 1
@@ -247,7 +247,7 @@ suite "SQLiteDatastore":
     check: delRes.isOk
 
     rowCount = 0
-    qRes = ds.rawQuery(rawQuery, onData)
+    qRes = ds.env.query(query, onData)
     assert qRes.isOk
 
     check:
