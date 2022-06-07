@@ -1,7 +1,6 @@
 import std/options
 import std/os
 
-import pkg/sqlite3_abi
 import pkg/stew/byteutils
 import pkg/stew/results
 import pkg/unittest2
@@ -34,7 +33,10 @@ suite "SQLiteDatastore":
 
   test "new":
     var
-      dsRes: Result[SQLiteDatastore, ref CatchableError]
+      dsRes = SQLiteDatastore.new(basePathAbs, filename, readOnly = true)
+
+    # for `readOnly = true` to succeed the database file must already exist
+    check: dsRes.isErr
 
     dsRes = SQLiteDatastore.new(basePathAbs, filename)
 
@@ -62,9 +64,9 @@ suite "SQLiteDatastore":
     ds.close
     ds = nil
 
-    # for `readOnly = true` to succeed the database file must already exist on
-    # disk, so the existing file (per previous step) is not deleted prior to
-    # the next invocation of SQLiteDatastore.new
+    # for `readOnly = true` to succeed the database file must already exist, so
+    # the existing file (per previous step) is not deleted prior to the next
+    # invocation of `SQLiteDatastore.new`
 
     dsRes = SQLiteDatastore.new(basePath, filename, readOnly = true)
 
@@ -94,12 +96,7 @@ suite "SQLiteDatastore":
 
     dsRes = SQLiteDatastore.new(readOnly = true, inMemory = true)
 
-    assert dsRes.isOk
-    ds = dsRes.get
-
-    check:
-      not dirExists(basePathAbs)
-      not fileExists(dbPathAbs)
+    check: dsRes.isErr
 
   test "accessors":
     ds = SQLiteDatastore.new(basePath).get

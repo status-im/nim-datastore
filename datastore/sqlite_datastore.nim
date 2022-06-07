@@ -83,7 +83,10 @@ proc new*(
     basep, fname, dbPath: string
 
   if inMemory:
-    dbPath = ":memory:"
+    if readOnly:
+      return failure "SQLiteDatastore cannot be read-only and in-memory"
+    else:
+      dbPath = ":memory:"
   else:
     try:
       basep = normalizePathEnd(
@@ -93,7 +96,10 @@ proc new*(
       fname = filename.normalizePathEnd
       dbPath = basep / fname
 
-      createDir(basep)
+      if readOnly and not fileExists(dbPath):
+        return failure "read-only database does not exist: " & dbPath
+      else:
+        createDir(basep)
 
     except IOError as e:
       return failure e
