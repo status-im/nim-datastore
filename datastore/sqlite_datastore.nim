@@ -30,11 +30,14 @@ type
 
   SQLiteStmt*[Params, Result] = distinct RawStmtPtr
 
-  # feels odd to use `void` here but it fits with the rest of the SQLite
-  # wrapper adapted from waku
+  # feels odd to use `void` for prepared statements corresponding to SELECT
+  # queries but it fits with the rest of the SQLite wrapper adapted from waku
+
   ContainsStmt = SQLiteStmt[(seq[byte]), void]
 
   DeleteStmt = SQLiteStmt[(seq[byte]), void]
+
+  GetStmt = SQLiteStmt[(seq[byte]), void]
 
   PutStmt = SQLiteStmt[(seq[byte], seq[byte], int64), void]
 
@@ -43,6 +46,7 @@ type
     containsStmt: ContainsStmt
     deleteStmt: DeleteStmt
     env: SQLite
+    getStmt: GetStmt
     putStmt: PutStmt
     readOnly: bool
 
@@ -334,6 +338,7 @@ proc new*(
   var
     containsStmt: RawStmtPtr
     deleteStmt: RawStmtPtr
+    getStmt: RawStmtPtr
     putStmt: RawStmtPtr
 
   if not readOnly:
@@ -361,8 +366,7 @@ proc new*(
       REPLACE INTO """ & TableTitle & """ (
         id, data, timestamp
       ) VALUES (?, ?, ?);
-      """
-    ): discard
+    """): discard
 
   # if a readOnly/existing database does not have the expected schema, the
   # following `pepare()` will fail and `new` will return an error with message
@@ -376,9 +380,15 @@ proc new*(
     );
   """): discard
 
+  getStmt = prepare("""
+    SELECT data FROM """ & TableTitle & """
+    WHERE id = ?;
+  """): discard
+
   success T(dbPath: dbPath, containsStmt: ContainsStmt(containsStmt),
             deleteStmt: DeleteStmt(deleteStmt), env: env.release,
-            putStmt: PutStmt(putStmt), readOnly: readOnly)
+            getStmt: GetStmt(getStmt), putStmt: PutStmt(putStmt),
+            readOnly: readOnly)
 
 proc dbPath*(self: SQLiteDatastore): string =
   self.dbPath
@@ -393,31 +403,33 @@ proc close*(self: SQLiteDatastore) =
 proc timestamp*(): int64 =
   (epochTime() * 1_000_000).int64
 
-proc idCol*(s: RawStmtPtr): string =
-  const
-    index = 0
+proc idCol*(
+  s: RawStmtPtr,
+  index = 0): string =
 
   let
-    idBytes = cast[ptr UncheckedArray[byte]](sqlite3_column_blob(s, index))
-    idLen = sqlite3_column_bytes(s, index)
+    i = index.cint
+    idBytes = cast[ptr UncheckedArray[byte]](sqlite3_column_blob(s, i))
+    idLen = sqlite3_column_bytes(s, i)
 
   string.fromBytes(@(toOpenArray(idBytes, 0, idLen - 1)))
 
-proc dataCol*(s: RawStmtPtr): seq[byte] =
-  const
-    index = 1
+proc dataCol*(
+  s: RawStmtPtr,
+  index = 1): seq[byte] =
 
   let
-    dataBytes = cast[ptr UncheckedArray[byte]](sqlite3_column_blob(s, index))
-    dataLen = sqlite3_column_bytes(s, index)
+    i = index.cint
+    dataBytes = cast[ptr UncheckedArray[byte]](sqlite3_column_blob(s, i))
+    dataLen = sqlite3_column_bytes(s, i)
 
   @(toOpenArray(dataBytes, 0, dataLen - 1))
 
-proc timestampCol*(s: RawStmtPtr): int64 =
-  const
-    index = 2
+proc timestampCol*(
+  s: RawStmtPtr,
+  index = 2): int64 =
 
-  sqlite3_column_int64(s, index)
+  sqlite3_column_int64(s, index.cint)
 
 method contains*(
   self: SQLiteDatastore,
@@ -449,7 +461,23 @@ method get*(
   self: SQLiteDatastore,
   key: Key): ?!(?seq[byte]) =
 
-  success seq[byte].none
+  # see comment in ./filesystem_datastore re: finer control of memory
+  # allocation in `method get`, could apply here as well if bytes were read
+  # incrementally with `sqlite3_blob_read`
+
+  var
+    bytes: seq[byte]
+
+  proc onData(s: RawStmtPtr) {.closure.} =
+    bytes = dataCol(s, 0)
+
+  let
+    exists = ? self.getStmt.query((key.id.toBytes), onData)
+
+  if exists:
+    success bytes.some
+  else:
+    success seq[byte].none
 
 method put*(
   self: SQLiteDatastore,
