@@ -30,10 +30,13 @@ type
 
   SQLiteStmt*[Params, Result] = distinct RawStmtPtr
 
+  DeleteStmt = SQLiteStmt[(seq[byte]), void]
+
   PutStmt = SQLiteStmt[(seq[byte], seq[byte], int64), void]
 
   SQLiteDatastore* = ref object of Datastore
     dbPath: string
+    deleteStmt: DeleteStmt
     env: SQLite
     putStmt: PutStmt
     readOnly: bool
@@ -247,6 +250,7 @@ proc new*(
   checkExec(journalModePragma)
 
   var
+    deleteStmt: RawStmtPtr
     putStmt: RawStmtPtr
 
   if not readOnly:
@@ -261,6 +265,11 @@ proc new*(
 
     checkExec createStmt
 
+    deleteStmt = prepare("""
+      DELETE FROM """ & TableTitle & """
+      WHERE id = ?;
+    """): discard
+
     putStmt = prepare("""
       REPLACE INTO """ & TableTitle & """ (
         id, data, timestamp
@@ -268,8 +277,8 @@ proc new*(
       """
     ): discard
 
-  success T(dbPath: dbPath, env: env.release, putStmt: PutStmt(putStmt),
-            readOnly: readOnly)
+  success T(dbPath: dbPath, deleteStmt: DeleteStmt(deleteStmt),
+            env: env.release, putStmt: PutStmt(putStmt), readOnly: readOnly)
 
 proc dbPath*(self: SQLiteDatastore): string =
   self.dbPath
@@ -369,7 +378,10 @@ method delete*(
   self: SQLiteDatastore,
   key: Key): ?!void =
 
-  success()
+  if self.readOnly:
+    failure "database is read-only":
+  else:
+    self.deleteStmt.exec((key.id.toBytes))
 
 method get*(
   self: SQLiteDatastore,
