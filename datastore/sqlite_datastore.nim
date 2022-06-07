@@ -43,6 +43,9 @@ type
 
 const
   TableTitle* = "Store"
+
+  IdTableType = "BLOB"
+  DataTableType = "BLOB"
   TimestampTableType = "INTEGER"
 
   dbExt* = ".sqlite3"
@@ -257,8 +260,8 @@ proc new*(
     let
       createStmt = prepare("""
         CREATE TABLE IF NOT EXISTS """ & TableTitle & """ (
-          id BLOB NOT NULL PRIMARY KEY,
-          data BLOB,
+          id """ & IdTableType & """ NOT NULL PRIMARY KEY,
+          data """ & DataTableType & """,
           timestamp """ & TimestampTableType & """ NOT NULL
         ) WITHOUT ROWID;
       """): discard
