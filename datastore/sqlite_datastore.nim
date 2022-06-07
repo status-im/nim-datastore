@@ -97,18 +97,17 @@ template prepare(
 
   s
 
-proc prepareStmt*(
+proc prepare*[Params, Res](
+  T: type SQLiteStmt[Params, Res],
   env: SQLite,
-  stmt: string,
-  Params: type,
-  Res: type): ?!SQLiteStmt[Params, Res] =
+  stmt: string): ?!T =
 
   var
     s: RawStmtPtr
 
   checkErr sqlite3_prepare_v2(env, stmt.cstring, stmt.len.cint, addr s, nil)
 
-  success SQLiteStmt[Params, Res](s)
+  success T(s)
 
 proc bindParam(
   s: RawStmtPtr,
@@ -289,18 +288,6 @@ proc new*(
 
   checkErr sqlite3_open_v2(dbPath.cstring, addr env.val, flags.cint, nil)
 
-  template prepare(
-    q: string,
-    cleanup: untyped): RawStmtPtr =
-
-    var
-      s: RawStmtPtr
-
-    checkErr sqlite3_prepare_v2(env.val, q.cstring, q.len.cint, addr s, nil):
-      cleanup
-
-    s
-
   template checkExec(s: RawStmtPtr) =
     if (let x = sqlite3_step(s); x != SQLITE_DONE):
       s.dispose
@@ -309,9 +296,9 @@ proc new*(
     if (let x = sqlite3_finalize(s); x != SQLITE_OK):
       return failure $sqlite3_errstr(x)
 
-  template checkExec(q: string) =
-    let
-      s = prepare(q): discard
+  template checkExec(env: SQLite, q: string) =
+    var
+      s = prepare(env, q): discard
 
     checkExec(s)
 
@@ -330,64 +317,63 @@ proc new*(
       return failure "Invalid pragma result: " & $x
 
   let
-    journalModePragma = prepare("PRAGMA journal_mode = WAL;"): discard
+    journalModePragma = prepare(env.val, "PRAGMA journal_mode = WAL;"): discard
 
   checkJournalModePragmaResult(journalModePragma)
   checkExec(journalModePragma)
 
   var
-    containsStmt: RawStmtPtr
-    deleteStmt: RawStmtPtr
-    getStmt: RawStmtPtr
-    putStmt: RawStmtPtr
+    containsStmt: ContainsStmt
+    deleteStmt: DeleteStmt
+    getStmt: GetStmt
+    putStmt: PutStmt
 
   if not readOnly:
     let
-      createStmt = prepare("""
+      createStmt = """
         CREATE TABLE IF NOT EXISTS """ & TableTitle & """ (
           id """ & IdTableType & """ NOT NULL PRIMARY KEY,
           data """ & DataTableType & """,
           timestamp """ & TimestampTableType & """ NOT NULL
         ) WITHOUT ROWID;
-      """): discard
+      """
 
-    checkExec createStmt
+    checkExec(env.val, createStmt)
 
     # if an existing database does not have the expected schema, the following
     # `pepare()` will fail and `new` will return an error with message "SQL
     # logic error"
 
-    deleteStmt = prepare("""
+    deleteStmt = ? DeleteStmt.prepare(env.val, """
       DELETE FROM """ & TableTitle & """
       WHERE id = ?;
-    """): discard
+    """)
 
-    putStmt = prepare("""
+    putStmt = ? PutStmt.prepare(env.val, """
       REPLACE INTO """ & TableTitle & """ (
         id, data, timestamp
       ) VALUES (?, ?, ?);
-    """): discard
+    """)
 
   # if a readOnly/existing database does not have the expected schema, the
   # following `pepare()` will fail and `new` will return an error with message
   # "SQL logic error"
 
   # https://stackoverflow.com/a/9756276
-  containsStmt = prepare("""
+  containsStmt = ? ContainsStmt.prepare(env.val, """
     SELECT EXISTS(
       SELECT 1 FROM """ & TableTitle & """
       WHERE id = ?
     );
-  """): discard
+  """)
 
-  getStmt = prepare("""
+  getStmt = ? GetStmt.prepare(env.val, """
     SELECT data FROM """ & TableTitle & """
     WHERE id = ?;
-  """): discard
+  """)
 
-  success T(dbPath: dbPath, containsStmt: ContainsStmt(containsStmt),
-            deleteStmt: DeleteStmt(deleteStmt), env: env.release,
-            getStmt: GetStmt(getStmt), putStmt: PutStmt(putStmt),
+  success T(dbPath: dbPath, containsStmt: containsStmt, deleteStmt: deleteStmt,
+            env: env.release, getStmt: getStmt, putStmt: putStmt,
             readOnly: readOnly)
 
 proc dbPath*(self: SQLiteDatastore): string =
