@@ -55,9 +55,6 @@ const
 
   dbExt* = ".sqlite3"
 
-proc timestamp*(): int64 =
-  (epochTime() * 1_000_000).int64
-
 template dispose(db: SQLite) =
   discard sqlite3_close(db)
 
@@ -95,6 +92,19 @@ template prepare(
     cleanup
 
   s
+
+proc prepareStmt*(
+  env: SQLite,
+  stmt: string,
+  Params: type,
+  Res: type): ?!SQLiteStmt[Params, Res] =
+
+  var
+    s: RawStmtPtr
+
+  checkErr sqlite3_prepare_v2(env, stmt.cstring, stmt.len.cint, addr s, nil)
+
+  success SQLiteStmt[Params, Res](s)
 
 proc bindParam(
   s: RawStmtPtr,
@@ -187,6 +197,38 @@ proc query*[P](
   # release implict transaction
   discard sqlite3_reset(s) # same return information as step
   discard sqlite3_clear_bindings(s) # no errors possible
+
+  res
+
+proc query*(
+  env: SQLite,
+  query: string,
+  onData: DataProc): ?!bool =
+
+  var
+    s = prepare(env, query): discard
+
+  var
+    res = success false
+
+  while true:
+    let
+      v = sqlite3_step(s)
+
+    case v
+    of SQLITE_ROW:
+      onData(s)
+      res = success true
+    of SQLITE_DONE:
+      break
+    else:
+      res = failure $sqlite3_errstr(v)
+
+  # release implicit transaction
+  discard sqlite3_reset(s) # same return information as step
+  discard sqlite3_clear_bindings(s) # no errors possible
+  # NB: dispose of the prepared query statement and free associated memory
+  discard sqlite3_finalize(s)
 
   res
 
@@ -348,6 +390,9 @@ proc close*(self: SQLiteDatastore) =
   discard sqlite3_close(self.env)
   self[] = SQLiteDatastore()[]
 
+proc timestamp*(): int64 =
+  (epochTime() * 1_000_000).int64
+
 proc idCol*(s: RawStmtPtr): string =
   const
     index = 0
@@ -373,51 +418,6 @@ proc timestampCol*(s: RawStmtPtr): int64 =
     index = 2
 
   sqlite3_column_int64(s, index)
-
-proc query*(
-  env: SQLite,
-  query: string,
-  onData: DataProc): ?!bool =
-
-  var
-    s = prepare(env, query): discard
-
-  var
-    res = success false
-
-  while true:
-    let
-      v = sqlite3_step(s)
-
-    case v
-    of SQLITE_ROW:
-      onData(s)
-      res = success true
-    of SQLITE_DONE:
-      break
-    else:
-      res = failure $sqlite3_errstr(v)
-
-  # release implicit transaction
-  discard sqlite3_reset(s) # same return information as step
-  discard sqlite3_clear_bindings(s) # no errors possible
-  # NB: dispose of the prepared query statement and free associated memory
-  discard sqlite3_finalize(s)
-
-  res
-
-proc prepareStmt*(
-  env: SQLite,
-  stmt: string,
-  Params: type,
-  Res: type): ?!SQLiteStmt[Params, Res] =
-
-  var
-    s: RawStmtPtr
-
-  checkErr sqlite3_prepare_v2(env, stmt.cstring, stmt.len.cint, addr s, nil)
-
-  success SQLiteStmt[Params, Res](s)
 
 method contains*(
   self: SQLiteDatastore,
