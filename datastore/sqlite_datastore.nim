@@ -407,8 +407,8 @@ proc close*(self: SQLiteDatastore) =
   self.env.dispose
   self[] = SQLiteDatastore()[]
 
-proc timestamp*(): int64 =
-  (epochTime() * 1_000_000).int64
+proc timestamp*(t = epochTime()): int64 =
+  (t * 1_000_000).int64
 
 proc idCol*(
   s: RawStmtPtr,

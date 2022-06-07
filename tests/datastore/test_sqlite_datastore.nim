@@ -113,6 +113,8 @@ suite "SQLiteDatastore":
 
     ds = nil
 
+    check: timestamp(10.123_456) == 10_123_456.int64
+
   test "put":
     let
       key = Key.init("a:b/c/d:e").get
