@@ -1,7 +1,6 @@
 import std/options
 import std/os
 
-import pkg/stew/byteutils
 import pkg/stew/results
 import pkg/unittest2
 
@@ -20,7 +19,7 @@ suite "SQLiteDatastore":
       dbPathAbs = basePathAbs / filename
 
     ds = nil
-    removeDir(dbPathAbs)
+    removeDir(basePathAbs)
     require(not dirExists(basePathAbs))
 
   teardown:
@@ -110,8 +109,94 @@ suite "SQLiteDatastore":
   #     true
 
   test "put":
+    let
+      key = Key.init("a:b/c/d:e").get
+
+    # for `readOnly = true` to succeed the database file must already exist
+    ds = SQLiteDatastore.new(basePathAbs, filename).get
+    ds.close
+    ds = nil
+    ds = SQLiteDatastore.new(basePathAbs, filename, readOnly = true).get
+
+    var
+      bytes: seq[byte]
+      timestamp = timestamp()
+      putRes = ds.put(key, bytes, timestamp)
+
+    check: putRes.isErr
+
+    ds.close
+    ds = nil
+    removeDir(basePathAbs)
+    assert not dirExists(basePathAbs)
+
+    ds = SQLiteDatastore.new(basePathAbs, filename).get
+
+    timestamp = timestamp()
+    putRes = ds.put(key, bytes, timestamp)
+
+    check: putRes.isOk
+
+    let
+      rawQuery = "SELECT * FROM " & TableTitle & ";"
+
+    var
+      qId: string
+      qData: seq[byte]
+      qTimestamp: int64
+      rowCount = 0
+
+    proc onData(s: RawStmtPtr) {.closure.} =
+      qId = ds.idCol(s)
+      qData = ds.dataCol(s)
+      qTimestamp = ds.timestampCol(s)
+      inc rowCount
+
+    var
+      qRes = ds.rawQuery(rawQuery, onData)
+
+    assert qRes.isOk
+
     check:
-      true
+      qRes.get
+      qId == key.id
+      qData == bytes
+      qTimestamp == timestamp
+      rowCount == 1
+
+    bytes = @[1.byte, 2.byte, 3.byte]
+    timestamp = timestamp()
+    putRes = ds.put(key, bytes, timestamp)
+
+    check: putRes.isOk
+
+    rowCount = 0
+    qRes = ds.rawQuery(rawQuery, onData)
+    assert qRes.isOk
+
+    check:
+      qRes.get
+      qId == key.id
+      qData == bytes
+      qTimestamp == timestamp
+      rowCount == 1
+
+    bytes = @[4.byte, 5.byte, 6.byte]
+    timestamp = timestamp()
+    putRes = ds.put(key, bytes, timestamp)
+
+    check: putRes.isOk
+
+    rowCount = 0
+    qRes = ds.rawQuery(rawQuery, onData)
+    assert qRes.isOk
+
+    check:
+      qRes.get
+      qId == key.id
+      qData == bytes
+      qTimestamp == timestamp
+      rowCount == 1
 
   test "delete":
     check:
