@@ -30,12 +30,17 @@ type
 
   SQLiteStmt*[Params, Result] = distinct RawStmtPtr
 
+  # feels odd to use `void` here but it fits with the rest of the SQLite
+  # wrapper adapted from waku
+  ContainsStmt = SQLiteStmt[(seq[byte]), void]
+
   DeleteStmt = SQLiteStmt[(seq[byte]), void]
 
   PutStmt = SQLiteStmt[(seq[byte], seq[byte], int64), void]
 
   SQLiteDatastore* = ref object of Datastore
     dbPath: string
+    containsStmt: ContainsStmt
     deleteStmt: DeleteStmt
     env: SQLite
     putStmt: PutStmt
@@ -153,6 +158,38 @@ proc exec*[P](
 
   res
 
+proc query*[P](
+  s: SQLiteStmt[P, void],
+  params: P,
+  onData: DataProc): ?!bool =
+
+  let
+    s = RawStmtPtr(s)
+
+  bindParams(s, params)
+
+  var
+    res = success false
+
+  while true:
+    let
+      v = sqlite3_step(s)
+
+    case v
+    of SQLITE_ROW:
+      onData(s)
+      res = success true
+    of SQLITE_DONE:
+      break
+    else:
+      res = failure $sqlite3_errstr(v)
+
+  # release implict transaction
+  discard sqlite3_reset(s) # same return information as step
+  discard sqlite3_clear_bindings(s) # no errors possible
+
+  res
+
 proc new*(
   T: type SQLiteDatastore,
   basePath = "data",
@@ -253,6 +290,7 @@ proc new*(
   checkExec(journalModePragma)
 
   var
+    containsStmt: RawStmtPtr
     deleteStmt: RawStmtPtr
     putStmt: RawStmtPtr
 
@@ -268,6 +306,10 @@ proc new*(
 
     checkExec createStmt
 
+    # if an existing database does not have the expected schema, the following
+    # `pepare()` will fail and `new` will return an error with message "SQL
+    # logic error"
+
     deleteStmt = prepare("""
       DELETE FROM """ & TableTitle & """
       WHERE id = ?;
@@ -280,8 +322,21 @@ proc new*(
       """
     ): discard
 
-  success T(dbPath: dbPath, deleteStmt: DeleteStmt(deleteStmt),
-            env: env.release, putStmt: PutStmt(putStmt), readOnly: readOnly)
+  # if a readOnly/existing database does not have the expected schema, the
+  # following `pepare()` will fail and `new` will return an error with message
+  # "SQL logic error"
+
+  # https://stackoverflow.com/a/9756276
+  containsStmt = prepare("""
+    SELECT EXISTS(
+      SELECT 1 FROM """ & TableTitle & """
+      WHERE id = ?
+    );
+  """): discard
+
+  success T(dbPath: dbPath, containsStmt: ContainsStmt(containsStmt),
+            deleteStmt: DeleteStmt(deleteStmt), env: env.release,
+            putStmt: PutStmt(putStmt), readOnly: readOnly)
 
 proc dbPath*(self: SQLiteDatastore): string =
   self.dbPath
@@ -375,7 +430,18 @@ method contains*(
   self: SQLiteDatastore,
   key: Key): ?!bool =
 
-  success false
+  var
+    exists = false
+
+  proc onData(s: RawStmtPtr) {.closure.} =
+    let
+      v = sqlite3_column_int64(s, 0)
+
+    if v == 1: exists = true
+
+  discard self.containsStmt.query((key.id.toBytes), onData)
+
+  success exists
 
 method delete*(
   self: SQLiteDatastore,
