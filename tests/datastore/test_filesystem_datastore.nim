@@ -103,6 +103,8 @@ suite "FileSystemDatastore":
     var
       key = Key.init("a:b/c/d:e").get
       path = ds.path(key)
+
+    let
       putRes = ds.put(key, bytes)
 
     assert putRes.isOk
