@@ -199,8 +199,66 @@ suite "SQLiteDatastore":
       rowCount == 1
 
   test "delete":
+    let
+      bytes = @[1.byte, 2.byte, 3.byte]
+
+    var
+      key = Key.init("a:b/c/d:e").get
+
+    # for `readOnly = true` to succeed the database file must already exist
+    ds = SQLiteDatastore.new(basePathAbs, filename).get
+    ds.close
+    ds = nil
+    ds = SQLiteDatastore.new(basePathAbs, filename, readOnly = true).get
+
+    var
+      delRes = ds.delete(key)
+
+    check: delRes.isErr
+
+    ds.close
+    ds = nil
+    removeDir(basePathAbs)
+    assert not dirExists(basePathAbs)
+
+    ds = SQLiteDatastore.new(basePathAbs, filename).get
+
+    let
+      putRes = ds.put(key, bytes)
+
+    assert putRes.isOk
+
+    let
+      rawQuery = "SELECT * FROM " & TableTitle & ";"
+
+    var
+      rowCount = 0
+
+    proc onData(s: RawStmtPtr) {.closure.} =
+      inc rowCount
+
+    var
+      qRes = ds.rawQuery(rawQuery, onData)
+
+    assert qRes.isOk
+    check: rowCount == 1
+    delRes = ds.delete(key)
+
+    check: delRes.isOk
+
+    rowCount = 0
+    qRes = ds.rawQuery(rawQuery, onData)
+    assert qRes.isOk
+
     check:
-      true
+      delRes.isOk
+      rowCount == 0
+
+    key = Key.init("X/Y/Z").get
+
+    delRes = ds.delete(key)
+
+    check: delRes.isOk
 
   test "contains":
     check:
