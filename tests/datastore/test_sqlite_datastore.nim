@@ -289,8 +289,39 @@ suite "SQLiteDatastore":
     check: containsRes.get == false
 
   test "get":
-    check:
-      true
+    ds = SQLiteDatastore.new(basePathAbs, filename).get
+
+    var
+      bytes: seq[byte]
+      key = Key.init("a:b/c/d:e").get
+      putRes = ds.put(key, bytes)
+
+    assert putRes.isOk
+
+    var
+      getRes = ds.get(key)
+      getOpt = getRes.get
+
+    check: getOpt.isSome and getOpt.get == bytes
+
+    bytes = @[1.byte, 2.byte, 3.byte]
+    putRes = ds.put(key, bytes)
+
+    assert putRes.isOk
+
+    getRes = ds.get(key)
+    getOpt = getRes.get
+
+    check: getOpt.isSome and getOpt.get == bytes
+
+    key = Key.init("X/Y/Z").get
+
+    assert not ds.contains(key).get
+
+    getRes = ds.get(key)
+    getOpt = getRes.get
+
+    check: getOpt.isNone
 
   # test "query":
   #   check:
