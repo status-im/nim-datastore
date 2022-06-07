@@ -28,7 +28,7 @@ type
 
   SQLite* = ptr sqlite3
 
-  SQLiteStmt*[Params, Result] = distinct RawStmtPtr
+  SQLiteStmt*[Params, Res] = distinct RawStmtPtr
 
   # feels odd to use `void` for prepared statements corresponding to SELECT
   # queries but it fits with the rest of the SQLite wrapper adapted from waku
@@ -59,32 +59,32 @@ const
 
   dbExt* = ".sqlite3"
 
-template dispose(db: SQLite) =
+template dispose*(db: SQLite) =
   discard sqlite3_close(db)
 
-template dispose(rawStmt: RawStmtPtr) =
+template dispose*(rawStmt: RawStmtPtr) =
   discard sqlite3_finalize(rawStmt)
 
-template dispose(sqliteStmt: SQLiteStmt) =
+template dispose*(sqliteStmt: SQLiteStmt) =
   discard sqlite3_finalize(RawStmtPtr(sqliteStmt))
 
-proc release[T](x: var AutoDisposed[T]): T =
+proc release*[T](x: var AutoDisposed[T]): T =
   result = x.val
   x.val = nil
 
-proc disposeIfUnreleased[T](x: var AutoDisposed[T]) =
+proc disposeIfUnreleased*[T](x: var AutoDisposed[T]) =
   mixin dispose
   if x.val != nil: dispose(x.release)
 
-template checkErr(op, cleanup: untyped) =
+template checkErr*(op, cleanup: untyped) =
   if (let v = (op); v != SQLITE_OK):
     cleanup
     return failure $sqlite3_errstr(v)
 
-template checkErr(op) =
+template checkErr*(op) =
   checkErr(op): discard
 
-template prepare(
+template prepare*(
   env: SQLite,
   q: string,
   cleanup: untyped): RawStmtPtr =
