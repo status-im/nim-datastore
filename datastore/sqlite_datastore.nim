@@ -65,7 +65,7 @@ template dispose(rawStmt: RawStmtPtr) =
   discard sqlite3_finalize(rawStmt)
 
 template dispose(sqliteStmt: SQLiteStmt) =
-  discard sqlite3_finalize(RawStmtPtr sqliteStmt)
+  discard sqlite3_finalize(RawStmtPtr(sqliteStmt))
 
 proc release[T](x: var AutoDisposed[T]): T =
   result = x.val
@@ -141,7 +141,7 @@ proc exec*[P](
   params: P): ?!void =
 
   let
-    s = RawStmtPtr s
+    s = RawStmtPtr(s)
 
   bindParams(s, params)
 
