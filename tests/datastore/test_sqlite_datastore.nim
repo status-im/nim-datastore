@@ -261,8 +261,32 @@ suite "SQLiteDatastore":
     check: delRes.isOk
 
   test "contains":
-    check:
-      true
+    let
+      bytes = @[1.byte, 2.byte, 3.byte]
+
+    var
+      key = Key.init("a:b/c/d:e").get
+
+    ds = SQLiteDatastore.new(basePathAbs, filename).get
+
+    let
+      putRes = ds.put(key, bytes)
+
+    assert putRes.isOk
+
+    var
+      containsRes = ds.contains(key)
+
+    assert containsRes.isOk
+
+    check: containsRes.get == true
+
+    key = Key.init("X/Y/Z").get
+
+    containsRes = ds.contains(key)
+    assert containsRes.isOk
+
+    check: containsRes.get == false
 
   test "get":
     check:
