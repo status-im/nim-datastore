@@ -39,7 +39,7 @@ task coverage, "generates code coverage report":
     echo "  *****************************************************************"
     echo ""
 
-  exec("nimble --verbose test --opt:speed -d:debug --verbosity:0 --hints:off --lineDir:on --nimcache:nimcache --passC:-fprofile-arcs --passC:-ftest-coverage --passL:-fprofile-arcs --passL:-ftest-coverage")
+  exec("nimble --verbose test --verbosity:0 --hints:off --lineDir:on --nimcache:nimcache --passC:-fprofile-arcs --passC:-ftest-coverage --passL:-fprofile-arcs --passL:-ftest-coverage")
   exec("cd nimcache; rm *.c; cd ..")
   mkDir("coverage")
   exec("lcov --capture --directory nimcache --output-file coverage/coverage.info")
