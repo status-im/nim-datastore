@@ -217,7 +217,7 @@ method contains*(
 
     if v == 1: exists = true
 
-  discard self.containsStmt.query((key.id.toBytes), onData)
+  discard ? self.containsStmt.query((key.id.toBytes), onData)
 
   success exists
 
