@@ -126,27 +126,12 @@ proc new*(
       if readOnly: SQLITE_OPEN_READONLY
       else: SQLITE_OPEN_READWRITE or SQLITE_OPEN_CREATE
 
-  checkErr sqlite3_open_v2(dbPath.cstring, addr env.val, flags.cint, nil)
-
-  template checkJournalModePragmaStmt(journalModePragma: RawStmtPtr) =
-    if (let x = sqlite3_step(journalModePragma); x != SQLITE_ROW):
-      journalModePragma.dispose
-      return failure $sqlite3_errstr(x)
-
-    if (let x = sqlite3_column_type(journalModePragma, 0); x != SQLITE3_TEXT):
-      journalModePragma.dispose
-      return failure $sqlite3_errstr(x)
-
-    if (let x = sqlite3_column_text(journalModePragma, 0);
-        x != "memory" and x != "wal"):
-      journalModePragma.dispose
-      return failure "Invalid pragma result: " & $x
+  open(dbPath, env.val, flags)
 
   let
-    journalModePragma = prepare(env.val, "PRAGMA journal_mode = WAL;")
+    pragmaStmt = journalModePragmaStmt(env.val)
 
-  checkJournalModePragmaStmt(journalModePragma)
-  checkExec(journalModePragma)
+  checkExec(pragmaStmt)
 
   var
     containsStmt: ContainsStmt
@@ -156,17 +141,16 @@ proc new*(
 
   if not readOnly:
     checkExec(env.val, createStmtStr)
-    # if an existing database does not have the expected schema, the following
-    # `pepare()` will fail and `new` will return an error with message
-    # "SQL logic error"
+
     deleteStmt = ? DeleteStmt.prepare(env.val, deleteStmtStr)
     putStmt = ? PutStmt.prepare(env.val, putStmtStr)
 
-  # if a readOnly/existing database does not have the expected schema, the
-  # following `pepare()` will fail and `new` will return an error with message
-  # "SQL logic error"
   containsStmt = ? ContainsStmt.prepare(env.val, containsStmtStr)
   getStmt = ? GetStmt.prepare(env.val, getStmtStr)
+
+  # if a readOnly/existing database does not satisfy the expected schema
+  # `pepare()` will fail and `new` will return an error with message
+  # "SQL logic error"
 
   success T(dbPath: dbPath, containsStmt: containsStmt, deleteStmt: deleteStmt,
             env: env.release, getStmt: getStmt, putStmt: putStmt,

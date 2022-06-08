@@ -10,7 +10,6 @@ push: {.upraises: [].}
 
 type
   AutoDisposed*[T: ptr|ref] = object
-    # ? can be private ?
     val*: T
 
   DataProc* = proc(s: RawStmtPtr) {.closure.}
@@ -70,7 +69,6 @@ template checkErr*(op: untyped) =
   if (let v = (op); v != SQLITE_OK):
     return failure $sqlite3_errstr(v)
 
-# ? can be private ?
 template checkExec*(s: RawStmtPtr) =
   if (let x = sqlite3_step(s); x != SQLITE_DONE):
     s.dispose
@@ -79,7 +77,6 @@ template checkExec*(s: RawStmtPtr) =
   if (let x = sqlite3_finalize(s); x != SQLITE_OK):
     return failure $sqlite3_errstr(x)
 
-# ? can be private ?
 template checkExec*(env: SQLite, q: string) =
   let
     s = prepare(env, q)
@@ -121,6 +118,31 @@ proc exec*[P](
 
   res
 
+template journalModePragmaStmt*(env: SQLite): RawStmtPtr =
+  let
+    s = prepare(env, "PRAGMA journal_mode = WAL;")
+
+  if (let x = sqlite3_step(s); x != SQLITE_ROW):
+    s.dispose
+    return failure $sqlite3_errstr(x)
+
+  if (let x = sqlite3_column_type(s, 0); x != SQLITE3_TEXT):
+    s.dispose
+    return failure $sqlite3_errstr(x)
+
+  if (let x = sqlite3_column_text(s, 0); x != "memory" and x != "wal"):
+    s.dispose
+    return failure "Invalid pragma result: " & $x
+
+  s
+
+template open*(
+  dbPath: string,
+  env: var SQLite,
+  flags = 0) =
+
+  checkErr sqlite3_open_v2(dbPath.cstring, addr env, flags.cint, nil)
+
 proc prepare*[Params, Res](
   T: type SQLiteStmt[Params, Res],
   env: SQLite,
@@ -133,7 +155,6 @@ proc prepare*[Params, Res](
 
   success T(s)
 
-# ? can be private ?
 template prepare*(
   env: SQLite,
   q: string): RawStmtPtr =
