@@ -39,6 +39,8 @@ type
 
   GetStmt = SQLiteStmt[(seq[byte]), void]
 
+  NoParamsStmt* = SQLiteStmt[NoParams, void]
+
   PutStmt = SQLiteStmt[(seq[byte], seq[byte], int64), void]
 
   SQLiteDatastore* = ref object of Datastore
@@ -84,19 +86,6 @@ template checkErr*(op, cleanup: untyped) =
 template checkErr*(op) =
   checkErr(op): discard
 
-template prepare*(
-  env: SQLite,
-  q: string,
-  cleanup: untyped): RawStmtPtr =
-
-  var
-    s: RawStmtPtr
-
-  checkErr sqlite3_prepare_v2(env, q.cstring, q.len.cint, addr s, nil):
-    cleanup
-
-  s
-
 proc prepare*[Params, Res](
   T: type SQLiteStmt[Params, Res],
   env: SQLite,
@@ -139,12 +128,13 @@ template bindParams(
   params: auto) =
 
   when params is tuple:
-    var
-      i = 1
+    when params isnot NoParams:
+      var
+        i = 1
 
-    for param in fields(params):
-      checkErr bindParam(s, i, param)
-      inc i
+      for param in fields(params):
+        checkErr bindParam(s, i, param)
+        inc i
 
   else:
     checkErr bindParam(s, 1, params)
@@ -208,28 +198,10 @@ proc query*(
   query: string,
   onData: DataProc): ?!bool =
 
-  var
-    s = prepare(env, query): discard
+  let
+    s = ? NoParamsStmt.prepare(env, query)
+    res = s.query((), onData)
 
-  var
-    res = success false
-
-  while true:
-    let
-      v = sqlite3_step(s)
-
-    case v
-    of SQLITE_ROW:
-      onData(s)
-      res = success true
-    of SQLITE_DONE:
-      break
-    else:
-      res = failure $sqlite3_errstr(v)
-
-  # release implicit transaction
-  discard sqlite3_reset(s) # same return information as step
-  discard sqlite3_clear_bindings(s) # no errors possible
   # NB: dispose of the prepared query statement and free associated memory
   s.dispose
 
@@ -288,6 +260,17 @@ proc new*(
 
   checkErr sqlite3_open_v2(dbPath.cstring, addr env.val, flags.cint, nil)
 
+  template prepare(
+    env: SQLite,
+    q: string): RawStmtPtr =
+
+    var
+      s: RawStmtPtr
+
+    checkErr sqlite3_prepare_v2(env, q.cstring, q.len.cint, addr s, nil)
+
+    s
+
   template checkExec(s: RawStmtPtr) =
     if (let x = sqlite3_step(s); x != SQLITE_DONE):
       s.dispose
@@ -297,12 +280,12 @@ proc new*(
       return failure $sqlite3_errstr(x)
 
   template checkExec(env: SQLite, q: string) =
-    var
-      s = prepare(env, q): discard
+    let
+      s = prepare(env, q)
 
     checkExec(s)
 
-  template checkJournalModePragmaResult(journalModePragma: RawStmtPtr) =
+  template checkJournalModePragmaStmt(journalModePragma: RawStmtPtr) =
     if (let x = sqlite3_step(journalModePragma); x != SQLITE_ROW):
       journalModePragma.dispose
       return failure $sqlite3_errstr(x)
@@ -317,9 +300,9 @@ proc new*(
       return failure "Invalid pragma result: " & $x
 
   let
-    journalModePragma = prepare(env.val, "PRAGMA journal_mode = WAL;"): discard
+    journalModePragma = prepare(env.val, "PRAGMA journal_mode = WAL;")
 
-  checkJournalModePragmaResult(journalModePragma)
+  checkJournalModePragmaStmt(journalModePragma)
   checkExec(journalModePragma)
 
   var
