@@ -35,11 +35,44 @@ type
     readOnly: bool
 
 const
-  TableTitle* = "Store"
-  IdTableType = "BLOB"
-  DataTableType = "BLOB"
-  TimestampTableType = "INTEGER"
+  IdType = "BLOB"
+  DataType = "BLOB"
+  TimestampType = "INTEGER"
+
   dbExt* = ".sqlite3"
+  tableTitle* = "Store"
+
+  # https://stackoverflow.com/a/9756276
+  containsStmtStr = """
+    SELECT EXISTS(
+      SELECT 1 FROM """ & tableTitle & """
+      WHERE id = ?
+    );
+  """
+
+  createStmtStr = """
+    CREATE TABLE IF NOT EXISTS """ & tableTitle & """ (
+      id """ & IdType & """ NOT NULL PRIMARY KEY,
+      data """ & DataType & """,
+      timestamp """ & TimestampType & """ NOT NULL
+    ) WITHOUT ROWID;
+  """
+
+  deleteStmtStr = """
+    DELETE FROM """ & tableTitle & """
+    WHERE id = ?;
+  """
+
+  getStmtStr = """
+    SELECT data FROM """ & tableTitle & """
+    WHERE id = ?;
+  """
+
+  putStmtStr = """
+    REPLACE INTO """ & tableTitle & """ (
+      id, data, timestamp
+    ) VALUES (?, ?, ?);
+  """
 
 proc new*(
   T: type SQLiteDatastore,
@@ -146,48 +179,18 @@ proc new*(
     putStmt: PutStmt
 
   if not readOnly:
-    let
-      createStmt = """
-        CREATE TABLE IF NOT EXISTS """ & TableTitle & """ (
-          id """ & IdTableType & """ NOT NULL PRIMARY KEY,
-          data """ & DataTableType & """,
-          timestamp """ & TimestampTableType & """ NOT NULL
-        ) WITHOUT ROWID;
-      """
-
-    checkExec(env.val, createStmt)
-
+    checkExec(env.val, createStmtStr)
     # if an existing database does not have the expected schema, the following
-    # `pepare()` will fail and `new` will return an error with message "SQL
-    # logic error"
-
-    deleteStmt = ? DeleteStmt.prepare(env.val, """
-      DELETE FROM """ & TableTitle & """
-      WHERE id = ?;
-    """)
-
-    putStmt = ? PutStmt.prepare(env.val, """
-      REPLACE INTO """ & TableTitle & """ (
-        id, data, timestamp
-      ) VALUES (?, ?, ?);
-    """)
+    # `pepare()` will fail and `new` will return an error with message
+    # "SQL logic error"
+    deleteStmt = ? DeleteStmt.prepare(env.val, deleteStmtStr)
+    putStmt = ? PutStmt.prepare(env.val, putStmtStr)
 
   # if a readOnly/existing database does not have the expected schema, the
   # following `pepare()` will fail and `new` will return an error with message
   # "SQL logic error"
-
-  # https://stackoverflow.com/a/9756276
-  containsStmt = ? ContainsStmt.prepare(env.val, """
-    SELECT EXISTS(
-      SELECT 1 FROM """ & TableTitle & """
-      WHERE id = ?
-    );
-  """)
-
-  getStmt = ? GetStmt.prepare(env.val, """
-    SELECT data FROM """ & TableTitle & """
-    WHERE id = ?;
-  """)
+  containsStmt = ? ContainsStmt.prepare(env.val, containsStmtStr)
+  getStmt = ? GetStmt.prepare(env.val, getStmtStr)
 
   success T(dbPath: dbPath, containsStmt: containsStmt, deleteStmt: deleteStmt,
             env: env.release, getStmt: getStmt, putStmt: putStmt,

@@ -145,7 +145,7 @@ suite "SQLiteDatastore":
     check: putRes.isOk
 
     let
-      query = "SELECT * FROM " & TableTitle & ";"
+      query = "SELECT * FROM " & tableTitle & ";"
 
     var
       qId: string
@@ -236,7 +236,7 @@ suite "SQLiteDatastore":
     assert putRes.isOk
 
     let
-      query = "SELECT * FROM " & TableTitle & ";"
+      query = "SELECT * FROM " & tableTitle & ";"
 
     var
       rowCount = 0
