@@ -3,6 +3,7 @@ import std/times
 
 import pkg/questionable
 import pkg/questionable/results
+import pkg/sqlite3_abi
 import pkg/stew/byteutils
 import pkg/upraises
 
@@ -126,31 +127,6 @@ proc new*(
       else: SQLITE_OPEN_READWRITE or SQLITE_OPEN_CREATE
 
   checkErr sqlite3_open_v2(dbPath.cstring, addr env.val, flags.cint, nil)
-
-  template prepare(
-    env: SQLite,
-    q: string): RawStmtPtr =
-
-    var
-      s: RawStmtPtr
-
-    checkErr sqlite3_prepare_v2(env, q.cstring, q.len.cint, addr s, nil)
-
-    s
-
-  template checkExec(s: RawStmtPtr) =
-    if (let x = sqlite3_step(s); x != SQLITE_DONE):
-      s.dispose
-      return failure $sqlite3_errstr(x)
-
-    if (let x = sqlite3_finalize(s); x != SQLITE_OK):
-      return failure $sqlite3_errstr(x)
-
-  template checkExec(env: SQLite, q: string) =
-    let
-      s = prepare(env, q)
-
-    checkExec(s)
 
   template checkJournalModePragmaStmt(journalModePragma: RawStmtPtr) =
     if (let x = sqlite3_step(journalModePragma); x != SQLITE_ROW):

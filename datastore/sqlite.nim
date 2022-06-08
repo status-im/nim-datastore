@@ -3,9 +3,6 @@ import pkg/questionable/results
 import pkg/sqlite3_abi
 import pkg/upraises
 
-# ? can be removed ?
-export sqlite3_abi
-
 push: {.upraises: [].}
 
 # Adapted from:
@@ -69,13 +66,25 @@ template bindParams(
   else:
     checkErr bindParam(s, 1, params)
 
-template checkErr*(op, cleanup: untyped) =
+template checkErr*(op: untyped) =
   if (let v = (op); v != SQLITE_OK):
-    cleanup
     return failure $sqlite3_errstr(v)
 
-template checkErr*(op) =
-  checkErr(op): discard
+# ? can be private ?
+template checkExec*(s: RawStmtPtr) =
+  if (let x = sqlite3_step(s); x != SQLITE_DONE):
+    s.dispose
+    return failure $sqlite3_errstr(x)
+
+  if (let x = sqlite3_finalize(s); x != SQLITE_OK):
+    return failure $sqlite3_errstr(x)
+
+# ? can be private ?
+template checkExec*(env: SQLite, q: string) =
+  let
+    s = prepare(env, q)
+
+  checkExec(s)
 
 template dispose*(db: SQLite) =
   discard sqlite3_close(db)
@@ -123,6 +132,18 @@ proc prepare*[Params, Res](
   checkErr sqlite3_prepare_v2(env, stmt.cstring, stmt.len.cint, addr s, nil)
 
   success T(s)
+
+# ? can be private ?
+template prepare*(
+  env: SQLite,
+  q: string): RawStmtPtr =
+
+  var
+    s: RawStmtPtr
+
+  checkErr sqlite3_prepare_v2(env, q.cstring, q.len.cint, addr s, nil)
+
+  s
 
 proc query*[P](
   s: SQLiteStmt[P, void],
