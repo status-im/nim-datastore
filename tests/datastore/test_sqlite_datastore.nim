@@ -18,16 +18,12 @@ suite "SQLiteDatastore":
       filename = "test_store" & dbExt
       dbPathAbs = basePathAbs / filename
 
-    ds = nil
     removeDir(basePathAbs)
     require(not dirExists(basePathAbs))
     discard dbPathAbs # suppresses "declared but not used" re: dbPathAbs
 
   teardown:
-    if not ds.isNil:
-      ds.close
-      ds = nil
-
+    if not ds.isNil: ds.close
     removeDir(basePathAbs)
     require(not dirExists(basePathAbs))
 
@@ -48,7 +44,6 @@ suite "SQLiteDatastore":
       fileExists(dbPathAbs)
 
     ds.close
-    ds = nil
     removeDir(basePathAbs)
     assert not dirExists(basePathAbs)
 
@@ -62,7 +57,6 @@ suite "SQLiteDatastore":
       fileExists(dbPathAbs)
 
     ds.close
-    ds = nil
 
     # for `readOnly = true` to succeed the database file must already exist, so
     # the existing file (per previous step) is not deleted prior to the next
@@ -78,7 +72,6 @@ suite "SQLiteDatastore":
       fileExists(dbPathAbs)
 
     ds.close
-    ds = nil
     removeDir(basePathAbs)
     assert not dirExists(basePathAbs)
 
@@ -92,7 +85,6 @@ suite "SQLiteDatastore":
       not fileExists(dbPathAbs)
 
     ds.close
-    ds = nil
 
     dsRes = SQLiteDatastore.new(readOnly = true, inMemory = true)
 
@@ -101,20 +93,18 @@ suite "SQLiteDatastore":
   test "accessors":
     ds = SQLiteDatastore.new(basePath).get
 
-    check: parentDir(ds.dbPath) == basePathAbs
-
-    check: not ds.env.isNil
+    check:
+      parentDir(ds.dbPath) == basePathAbs
+      not ds.env.isNil
 
   test "helpers":
     ds = SQLiteDatastore.new(basePath).get
 
     ds.close
 
-    check: ds.env.isNil
-
-    ds = nil
-
-    check: timestamp(10.123_456) == 10_123_456.int64
+    check:
+      ds.env.isNil
+      timestamp(10.123_456) == 10_123_456.int64
 
   test "put":
     let
@@ -123,7 +113,6 @@ suite "SQLiteDatastore":
     # for `readOnly = true` to succeed the database file must already exist
     ds = SQLiteDatastore.new(basePathAbs, filename).get
     ds.close
-    ds = nil
     ds = SQLiteDatastore.new(basePathAbs, filename, readOnly = true).get
 
     var
@@ -134,7 +123,6 @@ suite "SQLiteDatastore":
     check: putRes.isErr
 
     ds.close
-    ds = nil
     removeDir(basePathAbs)
     assert not dirExists(basePathAbs)
 
@@ -216,7 +204,6 @@ suite "SQLiteDatastore":
     # for `readOnly = true` to succeed the database file must already exist
     ds = SQLiteDatastore.new(basePathAbs, filename).get
     ds.close
-    ds = nil
     ds = SQLiteDatastore.new(basePathAbs, filename, readOnly = true).get
 
     var
@@ -225,7 +212,6 @@ suite "SQLiteDatastore":
     check: delRes.isErr
 
     ds.close
-    ds = nil
     removeDir(basePathAbs)
     assert not dirExists(basePathAbs)
 
