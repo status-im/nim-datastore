@@ -19,7 +19,7 @@ proc new*(
   if stores.len == 0:
     failure "stores must contain at least one Datastore"
   else:
-    T(stores: stores)
+    success T(stores: @stores)
 
 proc stores*(self: TieredDatastore): seq[Datastore] =
   self.stores
@@ -28,11 +28,21 @@ method contains*(
   self: TieredDatastore,
   key: Key): ?!bool {.locks: "unknown".} =
 
-  success false
+  var
+    exists = false
+
+  for store in self.stores:
+    exists = ? store.contains(key)
+    if exists: break
+
+  success exists
 
 method delete*(
   self: TieredDatastore,
   key: Key): ?!void {.locks: "unknown".} =
+
+  for store in self.stores:
+    ? store.delete(key)
 
   success()
 
@@ -40,12 +50,28 @@ method get*(
   self: TieredDatastore,
   key: Key): ?!(?seq[byte]) {.locks: "unknown".} =
 
-  success seq[byte].none
+  var
+    bytesOpt: ?seq[byte]
+
+  for store in self.stores:
+    bytesOpt = ? store.get(key)
+
+    # put found data into stores logically in front of the current store
+    if bytes =? bytesOpt:
+      for s in self.stores:
+        if s == store: break
+        ? s.put(key, bytes)
+      break
+
+  success bytesOpt
 
 method put*(
   self: TieredDatastore,
   key: Key,
   data: openArray[byte]): ?!void {.locks: "unknown".} =
+
+  for store in self.stores:
+    ? store.put(key, data)
 
   success()
 
