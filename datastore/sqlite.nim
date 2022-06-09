@@ -130,7 +130,7 @@ template journalModePragmaStmt*(env: SQLite): RawStmtPtr =
     s.dispose
     return failure $sqlite3_errstr(x)
 
-  if (let x = sqlite3_column_text(s, 0); x != "memory" and x != "wal"):
+  if (let x = $sqlite3_column_text(s, 0).cstring; x != "memory" and x != "wal"):
     s.dispose
     return failure "Invalid pragma result: " & $x
 

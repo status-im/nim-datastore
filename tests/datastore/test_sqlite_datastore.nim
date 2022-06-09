@@ -21,6 +21,7 @@ suite "SQLiteDatastore":
     ds = nil
     removeDir(basePathAbs)
     require(not dirExists(basePathAbs))
+    discard dbPathAbs # suppresses "declared but not used" re: dbPathAbs
 
   teardown:
     if not ds.isNil:

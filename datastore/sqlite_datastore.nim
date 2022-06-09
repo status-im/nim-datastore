@@ -206,7 +206,7 @@ proc timestampCol*(
 
 method contains*(
   self: SQLiteDatastore,
-  key: Key): ?!bool =
+  key: Key): ?!bool {.locks: "unknown".} =
 
   var
     exists = false
@@ -223,7 +223,7 @@ method contains*(
 
 method delete*(
   self: SQLiteDatastore,
-  key: Key): ?!void =
+  key: Key): ?!void {.locks: "unknown".} =
 
   if self.readOnly:
     failure "database is read-only":
@@ -232,7 +232,7 @@ method delete*(
 
 method get*(
   self: SQLiteDatastore,
-  key: Key): ?!(?seq[byte]) =
+  key: Key): ?!(?seq[byte]) {.locks: "unknown".} =
 
   # see comment in ./filesystem_datastore re: finer control of memory
   # allocation in `method get`, could apply here as well if bytes were read
@@ -252,19 +252,26 @@ method get*(
   else:
     success seq[byte].none
 
-method put*(
+proc put*(
   self: SQLiteDatastore,
   key: Key,
   data: openArray[byte],
-  timestamp = timestamp()): ?!void =
+  timestamp: int64): ?!void =
 
   if self.readOnly:
     failure "database is read-only"
   else:
     self.putStmt.exec((key.id.toBytes, @data, timestamp))
 
+method put*(
+  self: SQLiteDatastore,
+  key: Key,
+  data: openArray[byte]): ?!void {.locks: "unknown".} =
+
+  self.put(key, data, timestamp())
+
 # method query*(
 #   self: SQLiteDatastore,
-#   query: ...): ?!(?...) =
+#   query: ...): ?!(?...) {.locks: "unknown".} =
 #
 #   success ....none

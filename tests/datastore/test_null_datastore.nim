@@ -14,6 +14,8 @@ suite "NullDatastore":
       key = Key.init("a").get
       ds = NullDatastore.new()
 
+    discard key # suppresses "declared but not used" re: key
+
   test "new":
     check: not ds.isNil
 

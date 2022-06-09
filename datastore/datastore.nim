@@ -13,31 +13,31 @@ type
 
 method contains*(
   self: Datastore,
-  key: Key): ?!bool {.base.} =
+  key: Key): ?!bool {.base, locks: "unknown".} =
 
   raiseAssert("Not implemented!")
 
 method delete*(
   self: Datastore,
-  key: Key): ?!void {.base.} =
+  key: Key): ?!void {.base, locks: "unknown".} =
 
   raiseAssert("Not implemented!")
 
 method get*(
   self: Datastore,
-  key: Key): ?!(?seq[byte]) {.base.} =
+  key: Key): ?!(?seq[byte]) {.base, locks: "unknown".} =
 
   raiseAssert("Not implemented!")
 
 method put*(
   self: Datastore,
   key: Key,
-  data: openArray[byte]): ?!void {.base.} =
+  data: openArray[byte]): ?!void {.base, locks: "unknown".} =
 
   raiseAssert("Not implemented!")
 
 # method query*(
 #   self: Datastore,
-#   query: ...): ?!(?...) {.base.} =
+#   query: ...): ?!(?...) {.base, locks: "unknown".} =
 #
 #   raiseAssert("Not implemented!")

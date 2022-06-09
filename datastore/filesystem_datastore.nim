@@ -60,13 +60,13 @@ proc path*(
 
 method contains*(
   self: FileSystemDatastore,
-  key: Key): ?!bool =
+  key: Key): ?!bool {.locks: "unknown".} =
 
   success fileExists(self.path(key))
 
 method delete*(
   self: FileSystemDatastore,
-  key: Key): ?!void =
+  key: Key): ?!void {.locks: "unknown".} =
 
   let
     path = self.path(key)
@@ -84,7 +84,7 @@ method delete*(
 
 method get*(
   self: FileSystemDatastore,
-  key: Key): ?!(?seq[byte]) =
+  key: Key): ?!(?seq[byte]) {.locks: "unknown".} =
 
   # to support finer control of memory allocation, maybe could/should change
   # the signature of `get` so that it has a 3rd parameter
@@ -135,7 +135,7 @@ method get*(
 method put*(
   self: FileSystemDatastore,
   key: Key,
-  data: openArray[byte]): ?!void =
+  data: openArray[byte]): ?!void {.locks: "unknown".} =
 
   let
     path = self.path(key)
@@ -154,6 +154,6 @@ method put*(
 
 # method query*(
 #   self: FileSystemDatastore,
-#   query: ...): ?!(?...) =
+#   query: ...): ?!(?...) {.locks: "unknown".} =
 #
 #   success ....none
