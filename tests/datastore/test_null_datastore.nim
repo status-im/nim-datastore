@@ -5,9 +5,6 @@ import pkg/unittest2
 
 import ../../datastore/null_datastore
 
-const
-  oneByte = @[1.byte]
-
 suite "NullDatastore":
   setup:
     let
@@ -20,7 +17,7 @@ suite "NullDatastore":
     check: not ds.isNil
 
   test "put":
-    check: ds.put(key, oneByte).isOk
+    check: ds.put(key, [1.byte]).isOk
 
   test "delete":
     check: ds.delete(key).isOk
