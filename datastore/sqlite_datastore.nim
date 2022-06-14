@@ -18,13 +18,13 @@ type
   # feels odd to use `void` for prepared statements corresponding to SELECT
   # queries but it fits with the rest of the SQLite wrapper adapted from
   # status-im/nwaku, at least in its current form in ./sqlite
-  ContainsStmt = SQLiteStmt[(seq[byte]), void]
+  ContainsStmt = SQLiteStmt[(string), void]
 
-  DeleteStmt = SQLiteStmt[(seq[byte]), void]
+  DeleteStmt = SQLiteStmt[(string), void]
 
-  GetStmt = SQLiteStmt[(seq[byte]), void]
+  GetStmt = SQLiteStmt[(string), void]
 
-  PutStmt = SQLiteStmt[(seq[byte], seq[byte], int64), void]
+  PutStmt = SQLiteStmt[(string, seq[byte], int64), void]
 
   SQLiteDatastore* = ref object of Datastore
     dbPath: string
@@ -36,7 +36,7 @@ type
     readOnly: bool
 
 const
-  IdType = "BLOB"
+  IdType = "TEXT"
   DataType = "BLOB"
   TimestampType = "INTEGER"
 
@@ -180,12 +180,7 @@ proc idCol*(
   s: RawStmtPtr,
   index = 0): string =
 
-  let
-    i = index.cint
-    idBytes = cast[ptr UncheckedArray[byte]](sqlite3_column_blob(s, i))
-    idLen = sqlite3_column_bytes(s, i)
-
-  string.fromBytes(@(toOpenArray(idBytes, 0, idLen - 1)))
+  $sqlite3_column_text(s, index.cint).cstring
 
 proc dataCol*(
   s: RawStmtPtr,
@@ -217,7 +212,7 @@ method contains*(
 
     if v == 1: exists = true
 
-  discard ? self.containsStmt.query((key.id.toBytes), onData)
+  discard ? self.containsStmt.query((key.id), onData)
 
   success exists
 
@@ -228,7 +223,7 @@ method delete*(
   if self.readOnly:
     failure "database is read-only":
   else:
-    self.deleteStmt.exec((key.id.toBytes))
+    self.deleteStmt.exec((key.id))
 
 method get*(
   self: SQLiteDatastore,
@@ -245,7 +240,7 @@ method get*(
     bytes = dataCol(s, 0)
 
   let
-    exists = ? self.getStmt.query((key.id.toBytes), onData)
+    exists = ? self.getStmt.query((key.id), onData)
 
   if exists:
     success bytes.some
@@ -261,7 +256,7 @@ proc put*(
   if self.readOnly:
     failure "database is read-only"
   else:
-    self.putStmt.exec((key.id.toBytes, @data, timestamp))
+    self.putStmt.exec((key.id, @data, timestamp))
 
 method put*(
   self: SQLiteDatastore,

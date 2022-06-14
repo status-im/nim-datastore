@@ -24,6 +24,13 @@ type
 
   SQLiteStmt*[Params, Res] = distinct RawStmtPtr
 
+proc sqlite3_bind_text*(
+  pstmt: ptr sqlite3_stmt,
+  param: cint,
+  value: pointer,
+  n: cint,
+  dispose: proc (v: pointer) {.cdecl.}): cint {.importc, cdecl.}
+
 proc bindParam(
   s: RawStmtPtr,
   n: int,
@@ -42,10 +49,9 @@ proc bindParam(
     sqlite3_bind_int64(s, n.cint, val)
   elif val is float64:
     sqlite3_bind_double(s, n.cint, val)
-  # Note: bind_text not yet supported in sqlite3_abi wrapper
-  # elif val is string:
-  #   # `-1` implies string length is number of bytes up to first null-terminator
-  #   sqlite3_bind_text(s, n.cint, val.cstring, -1, nil)
+  elif val is string:
+    # `-1` implies string length is number of bytes up to first null-terminator
+    sqlite3_bind_text(s, n.cint, val.cstring, -1.cint, nil)
   else:
     {.fatal: "Please add support for the '" & $typeof(val) & "' type".}
 
