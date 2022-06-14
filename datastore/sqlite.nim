@@ -24,7 +24,7 @@ type
 
   SQLiteStmt*[Params, Res] = distinct RawStmtPtr
 
-proc sqlite3_bind_text*(
+proc sqlite3_bind_text(
   pstmt: ptr sqlite3_stmt,
   param: cint,
   value: pointer,
