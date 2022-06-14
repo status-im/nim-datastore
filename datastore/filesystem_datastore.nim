@@ -15,7 +15,7 @@ type
     root: string
 
 const
-  objExt* = ".obj"
+  objExt* = ".dsobject"
 
 proc new*(
   T: type FileSystemDatastore,
