@@ -14,6 +14,10 @@ suite "Namespace":
 
     check: nsRes.isErr
 
+    nsRes = Namespace.init("a", "   ")
+
+    check: nsRes.isErr
+
     nsRes = Namespace.init("a", ":")
 
     check: nsRes.isErr
@@ -34,11 +38,19 @@ suite "Namespace":
 
     check: nsRes.isOk
 
+    nsRes = Namespace.init("   ", "b")
+
+    check: nsRes.isErr
+
     nsRes = Namespace.init("a", "b")
 
     check: nsRes.isOk
 
     nsRes = Namespace.init("")
+
+    check: nsRes.isErr
+
+    nsRes = Namespace.init("   ")
 
     check: nsRes.isErr
 
@@ -62,11 +74,19 @@ suite "Namespace":
 
     check: nsRes.isErr
 
-    nsRes = Namespace.init(":b")
+    nsRes = Namespace.init("a:   ")
+
+    check: nsRes.isErr
+
+    nsRes = Namespace.init("   :b")
+
+    check: nsRes.isErr
+
+    nsRes = Namespace.init("a:b")
 
     check: nsRes.isOk
 
-    nsRes = Namespace.init("a:b")
+    nsRes = Namespace.init(":b")
 
     check: nsRes.isOk
 
@@ -178,6 +198,10 @@ suite "Key":
     check: keyRes.isOk
 
     keyRes = Key.init("")
+
+    check: keyRes.isErr
+
+    keyRes = Key.init("   ")
 
     check: keyRes.isErr
 

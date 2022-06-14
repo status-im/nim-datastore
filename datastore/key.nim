@@ -31,7 +31,11 @@ proc init*(
   T: type Namespace,
   field, value: string): ?!T =
 
-  if value == "": return failure "value string must not be empty"
+  if value == "":
+    return failure "value string must not be empty"
+
+  if value.strip == "":
+    return failure "value string must not be all whitespace"
 
   if value.contains(delimiter):
     return failure "value string must not contain delimiter \"" &
@@ -42,6 +46,9 @@ proc init*(
       separator & "\""
 
   if field != "":
+    if field.strip == "":
+      return failure "field string must not be all whitespace"
+
     if field.contains(delimiter):
       return failure "field string must not contain delimiter \"" &
         delimiter & "\""
@@ -60,6 +67,9 @@ proc init*(
 
   if id == "":
     return failure "id string must not be empty"
+
+  if id.strip == "":
+    return failure "id string must not be all whitespace"
 
   if id.contains(separator):
     return failure "id string must not contain separator \"" & separator & "\""
@@ -82,12 +92,27 @@ proc init*(
   if s.len == 1:
     value = s[0]
   else:
-    if s[1] == "":
+    value = s[1]
+
+    if value == "":
       return failure "value in id string \"[field]" & delimiter &
         "[value]\" must not be empty"
+
+    if value.strip == "":
+      return failure "value in id string \"[field]" & delimiter &
+        "[value]\" must not be all whitespace"
+
     else:
-      if s[0] != "": field = s[0].some
-      value = s[1]
+      let
+        f = s[0]
+
+      if f != "":
+        if f.strip == "":
+          return failure "field in id string \"[field]" & delimiter &
+            "[value]\" must not be all whitespace"
+
+        else:
+          field = f.some
 
   success T(field: field, value: value)
 
@@ -148,23 +173,26 @@ proc init*(
 
   if id == "":
     return failure "id string must contain at least one Namespace"
-  else:
-    let
-      nsStrs = id.split(separator).filterIt(it != "")
 
-    if nsStrs.len == 0:
-      return failure "id string must not contain only one or more separator " &
-        "\"" & separator & "\""
+  if id.strip == "":
+    return failure "id string must not be all whitespace"
 
-    let
-      keyRes = Key.init(nsStrs)
-    # if `without key =? Key.init(nsStrs), e:` is used `e` is nil in the body
-    # at runtime, why?
-    without key =? keyRes:
-      return failure "id string contains an invalid Namespace:" &
-        keyRes.error.msg.split(":")[1..^1].join("").replace("\"\"", "\":\"")
+  let
+    nsStrs = id.split(separator).filterIt(it != "")
 
-    success key
+  if nsStrs.len == 0:
+    return failure "id string must not contain only one or more separator " &
+      "\"" & separator & "\""
+
+  let
+    keyRes = Key.init(nsStrs)
+  # if `without key =? Key.init(nsStrs), e:` is used `e` is nil in the body
+  # at runtime, why?
+  without key =? keyRes:
+    return failure "id string contains an invalid Namespace:" &
+      keyRes.error.msg.split(":")[1..^1].join("").replace("\"\"", "\":\"")
+
+  success key
 
 proc namespaces*(self: Key): seq[Namespace] =
   self.namespaces
