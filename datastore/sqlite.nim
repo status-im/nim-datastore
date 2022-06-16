@@ -38,7 +38,15 @@ proc bindParam(
 
   when val is openarray[byte]|seq[byte]:
     if val.len > 0:
-      sqlite3_bind_blob(s, n.cint, unsafeAddr val[0], val.len.cint, nil)
+      try:
+        # `SQLITE_TRANSIENT` "indicate[s] that the object is to be copied prior
+        # to the return from sqlite3_bind_*(). The object and pointer to it
+        # must remain valid until then. SQLite will then manage the lifetime of
+        # its private copy."
+        sqlite3_bind_blob(s, n.cint, unsafeAddr val[0], val.len.cint,
+          SQLITE_TRANSIENT)
+      except Exception as e:
+        raise (ref Defect)(msg: $e.msg)
     else:
       sqlite3_bind_blob(s, n.cint, nil, 0.cint, nil)
   elif val is int32:
@@ -50,8 +58,15 @@ proc bindParam(
   elif val is float64:
     sqlite3_bind_double(s, n.cint, val)
   elif val is string:
-    # `-1` implies string length is number of bytes up to first null-terminator
-    sqlite3_bind_text(s, n.cint, val.cstring, -1.cint, nil)
+    try:
+      # `-1` implies string length is num bytes up to first null-terminator;
+      # `SQLITE_TRANSIENT` "indicate[s] that the object is to be copied prior
+      # to the return from sqlite3_bind_*(). The object and pointer to it must
+      # remain valid until then. SQLite will then manage the lifetime of its
+      # private copy."
+      sqlite3_bind_text(s, n.cint, val.cstring, -1.cint, SQLITE_TRANSIENT)
+    except Exception as e:
+      raise (ref Defect)(msg: $e.msg)
   else:
     {.fatal: "Please add support for the '" & $typeof(val) & "' type".}
 
