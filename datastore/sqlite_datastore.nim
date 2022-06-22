@@ -44,6 +44,9 @@ const
   tableTitle* = "Store"
 
   # https://stackoverflow.com/a/9756276
+  # EXISTS returns a boolean value represented by an integer:
+  # https://sqlite.org/datatype3.html#boolean_datatype
+  # https://sqlite.org/lang_expr.html#the_exists_operator
   containsStmtStr = """
     SELECT EXISTS(
       SELECT 1 FROM """ & tableTitle & """
