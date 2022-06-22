@@ -199,6 +199,7 @@ proc query*[P](
       break
     else:
       res = failure $sqlite3_errstr(v)
+      break
 
   # release implict transaction
   discard sqlite3_reset(s) # same return information as step
