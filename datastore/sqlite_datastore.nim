@@ -210,10 +210,7 @@ method contains*(
     exists = false
 
   proc onData(s: RawStmtPtr) {.closure.} =
-    let
-      v = sqlite3_column_int64(s, 0)
-
-    if v == 1: exists = true
+    exists = sqlite3_column_int64(s, 0).bool
 
   discard ? self.containsStmt.query((key.id), onData)
 
